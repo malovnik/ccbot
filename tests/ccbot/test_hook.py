@@ -6,7 +6,7 @@ import sys
 
 import pytest
 
-from ccbot.hook import _UUID_RE, _is_hook_installed, hook_main
+from ccbot.hook import _UUID_RE, _is_hook_installed, _update_hook_path, hook_main
 
 
 class TestUuidRegex:
@@ -81,6 +81,80 @@ class TestIsHookInstalled:
             }
         }
         assert _is_hook_installed(settings) is True
+
+
+class TestUpdateHookPath:
+    def test_updates_changed_path(self) -> None:
+        settings = {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "/old/path/ccbot hook",
+                                "timeout": 5,
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        assert _update_hook_path(settings, "/new/path/ccbot hook") is True
+        cmd = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        assert cmd == "/new/path/ccbot hook"
+
+    def test_no_change_needed(self) -> None:
+        settings = {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "/path/ccbot hook",
+                                "timeout": 5,
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        assert _update_hook_path(settings, "/path/ccbot hook") is False
+
+    def test_empty_settings(self) -> None:
+        assert _update_hook_path({}, "/path/ccbot hook") is False
+
+    def test_no_session_start(self) -> None:
+        assert _update_hook_path({"hooks": {}}, "/path/ccbot hook") is False
+
+    def test_bare_ccbot_hook_command(self) -> None:
+        settings = {
+            "hooks": {
+                "SessionStart": [
+                    {
+                        "hooks": [
+                            {
+                                "type": "command",
+                                "command": "ccbot hook",
+                                "timeout": 5,
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+        assert _update_hook_path(settings, "/new/ccbot hook") is True
+        cmd = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
+        assert cmd == "/new/ccbot hook"
+
+    def test_non_dict_entries_skipped(self) -> None:
+        settings = {
+            "hooks": {
+                "SessionStart": ["not a dict", {"hooks": ["also not a dict"]}]
+            }
+        }
+        assert _update_hook_path(settings, "/path/ccbot hook") is False
 
 
 class TestHookMainValidation:

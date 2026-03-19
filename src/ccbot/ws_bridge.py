@@ -102,8 +102,10 @@ def _is_path_allowed(path: Path) -> bool:
 
 def _display_path(path: Path) -> str:
     """Convert absolute path to display-safe ~/relative format."""
-    if path.is_relative_to(Path.home()):
-        return "~/" + str(path.relative_to(Path.home()))
+    home = Path.home()
+    if path.is_relative_to(home):
+        rel = path.relative_to(home)
+        return "~" if rel == Path(".") else "~/" + str(rel)
     return str(path)
 
 
