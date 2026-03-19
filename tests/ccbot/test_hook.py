@@ -150,9 +150,7 @@ class TestUpdateHookPath:
 
     def test_non_dict_entries_skipped(self) -> None:
         settings = {
-            "hooks": {
-                "SessionStart": ["not a dict", {"hooks": ["also not a dict"]}]
-            }
+            "hooks": {"SessionStart": ["not a dict", {"hooks": ["also not a dict"]}]}
         }
         assert _update_hook_path(settings, "/path/ccbot hook") is False
 
