@@ -95,6 +95,11 @@ class _ClientState:
 _MAX_CONNECTIONS = 20
 
 
+def _is_path_allowed(path: Path) -> bool:
+    """Check if path is within allowed_roots."""
+    return any(path.is_relative_to(root) for root in config.allowed_roots)
+
+
 class WsBridge:
     """WebSocket bridge server exposing CCBot to web frontends."""
 
@@ -402,9 +407,7 @@ class WsBridge:
             return
 
         # Enforce ALLOWED_ROOTS boundary
-        if not any(
-            path == root or path.is_relative_to(root) for root in config.allowed_roots
-        ):
+        if not _is_path_allowed(path):
             await self._send(
                 client,
                 WsError(code="access_denied", message="Path outside allowed roots"),
@@ -451,9 +454,7 @@ class WsBridge:
             )
             return
 
-        if not any(
-            path == root or path.is_relative_to(root) for root in config.allowed_roots
-        ):
+        if not _is_path_allowed(path):
             await self._send(
                 client,
                 WsError(code="access_denied", message="Path outside allowed roots"),
@@ -708,9 +709,7 @@ class WsBridge:
             return
 
         # Enforce ALLOWED_ROOTS boundary
-        if not any(
-            path == root or path.is_relative_to(root) for root in config.allowed_roots
-        ):
+        if not _is_path_allowed(path):
             await self._send(
                 client,
                 WsError(code="access_denied", message="Path outside allowed roots"),
