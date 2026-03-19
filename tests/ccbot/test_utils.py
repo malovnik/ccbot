@@ -77,6 +77,21 @@ class TestReadCwdFromJsonl:
     def test_missing_file_returns_empty(self, tmp_path: Path):
         assert read_cwd_from_jsonl(tmp_path / "nonexistent.jsonl") == ""
 
+    def test_invalid_json_skipped(self, tmp_path: Path):
+        f = tmp_path / "bad.jsonl"
+        f.write_text("not json\n" + json.dumps({"cwd": "/ok"}) + "\n")
+        assert read_cwd_from_jsonl(f) == "/ok"
+
+    def test_empty_file(self, tmp_path: Path):
+        f = tmp_path / "empty.jsonl"
+        f.write_text("")
+        assert read_cwd_from_jsonl(f) == ""
+
+    def test_blank_lines_skipped(self, tmp_path: Path):
+        f = tmp_path / "blanks.jsonl"
+        f.write_text("\n\n" + json.dumps({"cwd": "/found"}) + "\n\n")
+        assert read_cwd_from_jsonl(f) == "/found"
+
 
 class TestShutdownMarker:
     def test_write_and_read_marker(
