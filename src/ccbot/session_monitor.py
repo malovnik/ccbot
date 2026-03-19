@@ -577,30 +577,16 @@ class SessionMonitor:
                         self._last_tool_status.pop(sid, None)
                     elif has_working_entries:
                         status_text = self._last_tool_status.get(sid, "⏳ Работаю…")
-                        # Emit status: always on first appearance,
-                        # or when tool changed (update in-place via enqueue)
-                        if sid not in self._working_status_active:
-                            self._working_status_active.add(sid)
-                            new_messages.append(
-                                NewMessage(
-                                    session_id=sid,
-                                    text=status_text,
-                                    is_complete=True,
-                                    content_type="status",
-                                    role="assistant",
-                                )
+                        self._working_status_active.add(sid)
+                        new_messages.append(
+                            NewMessage(
+                                session_id=sid,
+                                text=status_text,
+                                is_complete=True,
+                                content_type="status",
+                                role="assistant",
                             )
-                        else:
-                            # Tool changed — emit updated status
-                            new_messages.append(
-                                NewMessage(
-                                    session_id=sid,
-                                    text=status_text,
-                                    is_complete=True,
-                                    content_type="status",
-                                    role="assistant",
-                                )
-                            )
+                        )
 
                 self.state.update_session(tracked)
 
