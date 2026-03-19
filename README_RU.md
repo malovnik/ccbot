@@ -166,6 +166,7 @@ uv run ccbot
 | Переменная | По умолчанию | Описание |
 |------------|-------------|----------|
 | `CCBOT_CLEAN_OUTPUT` | `true` | Фильтровать вывод инструментов, показывать только ответы Claude |
+| `CCBOT_SHOW_TOOL_CALLS` | `true` | Показывать tool_use/tool_result в Telegram (false = только текст) |
 | `CCBOT_SHOW_USER_MESSAGES` | `false` | Эхо пользовательских сообщений с префиксом |
 | `CCBOT_SHOW_HIDDEN_DIRS` | `false` | Показывать dot-директории в браузере |
 
