@@ -9,6 +9,7 @@ Key class: WsBridge — manages connections, auth, and message routing.
 
 from __future__ import annotations
 
+import asyncio
 import hmac
 import logging
 import time
@@ -168,12 +169,17 @@ class WsBridge:
             if fpath.exists() and fpath.is_file():
                 from .ws_protocol import WsFileMessage
 
+                relative_path = (
+                    str(fpath.relative_to(Path.home()))
+                    if str(fpath).startswith(str(Path.home()))
+                    else fpath.name
+                )
                 file_msg = WsFileMessage(
                     window_id=window_id,
-                    file_path=str(fpath),
+                    file_path=relative_path,
                     file_name=fpath.name,
                     file_size=fpath.stat().st_size,
-                    download_url=f"/api/file?path={str(fpath)}",
+                    download_url="",
                 )
                 await self.broadcast(serialize(file_msg))
             return
@@ -224,6 +230,14 @@ class WsBridge:
         remote = ws.remote_address
         logger.info("WS client connected: %s (id=%d)", remote, cid)
 
+        async def _close_if_unauthenticated() -> None:
+            await asyncio.sleep(30)
+            if not client.authenticated:
+                logger.warning("WS auth timeout for id=%d, closing", cid)
+                await ws.close(4001, "Authentication timeout")
+
+        auth_timer = asyncio.create_task(_close_if_unauthenticated())
+
         try:
             async for raw in ws:
                 if isinstance(raw, bytes):
@@ -256,9 +270,13 @@ class WsBridge:
                     "WS recv type=%s from id=%d", getattr(msg, "type", "?"), cid
                 )
                 await self._dispatch(client, msg)
+
+                if client.authenticated and not auth_timer.done():
+                    auth_timer.cancel()
         except websockets.ConnectionClosed as e:
             logger.debug("WS connection closed: code=%s reason=%s", e.code, e.reason)
         finally:
+            auth_timer.cancel()
             client.terminal_subscriptions.clear()
             self._clients.pop(cid, None)
             logger.info("WS client disconnected: %s (id=%d)", remote, cid)
@@ -425,6 +443,22 @@ class WsBridge:
         self, client: _ClientState, msg: WsResumeSession
     ) -> None:
         path = Path(msg.path).expanduser().resolve()
+        if not path.is_dir():
+            await self._send(
+                client,
+                WsError(code="invalid_path", message=f"Not a directory: {msg.path}"),
+            )
+            return
+
+        if not any(
+            path == root or str(path).startswith(str(root) + "/")
+            for root in config.allowed_roots
+        ):
+            await self._send(
+                client,
+                WsError(code="access_denied", message="Path outside allowed roots"),
+            )
+            return
 
         success, message, window_name, window_id = await tmux_manager.create_window(
             work_dir=str(path),
@@ -458,9 +492,20 @@ class WsBridge:
             serialize(WsSessionEnded(window_id=msg.window_id, reason="killed"))
         )
 
+    _MAX_WS_MESSAGE_LENGTH = 4096
+
     async def _handle_send_message(
         self, client: _ClientState, msg: WsSendMessage
     ) -> None:
+        if len(msg.text) > self._MAX_WS_MESSAGE_LENGTH:
+            await self._send(
+                client,
+                WsError(
+                    code="too_long",
+                    message=f"Message exceeds {self._MAX_WS_MESSAGE_LENGTH} chars",
+                ),
+            )
+            return
         success, error = await session_manager.send_to_window(msg.window_id, msg.text)
         if not success:
             await self._send(client, WsError(code="send_failed", message=error))
@@ -587,7 +632,13 @@ class WsBridge:
                                                 "tool_name": "Write",
                                                 "timestamp": ts,
                                                 "file_name": fpath.name,
-                                                "file_path": str(fpath),
+                                                "file_path": str(
+                                                    fpath.relative_to(Path.home())
+                                                )
+                                                if str(fpath).startswith(
+                                                    str(Path.home())
+                                                )
+                                                else fpath.name,
                                                 "file_size": str(
                                                     fpath.stat().st_size
                                                     if fpath.exists()
@@ -766,8 +817,10 @@ class WsBridge:
         upload_dir = config.config_dir / "uploads"
         upload_dir.mkdir(exist_ok=True)
 
-        # Sanitize filename
-        safe_name = "".join(c if c.isalnum() or c in ".-_" else "_" for c in file_name)
+        # Sanitize filename (limit to 255 chars for FS compatibility)
+        safe_name = "".join(c if c.isalnum() or c in ".-_" else "_" for c in file_name)[
+            :255
+        ]
         if not safe_name:
             safe_name = "upload"
 

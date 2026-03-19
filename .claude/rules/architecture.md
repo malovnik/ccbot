@@ -69,14 +69,19 @@
 
 Additional modules:
   screenshot.py       ─ Terminal text → PNG rendering (ANSI color, font fallback)
-  transcribe.py       ─ Voice-to-text transcription via OpenAI API (gpt-4o-transcribe)
-  main.py             ─ CLI entry point
+  transcribe.py       ─ Voice-to-text transcription via Deepgram Nova-3 API
+  main.py             ─ CLI entry point (3 modes: hook, web, default+--with-web)
   utils.py            ─ Shared utilities (ccbot_dir, atomic_write_json)
+
+WebSocket bridge modules:
+  ws_bridge.py        ─ WS server for web frontend (auth, routing, terminal capture)
+  ws_protocol.py      ─ 26 typed WS message dataclasses
+  terminal_stream.py  ─ Periodic terminal capture with diff delivery
 
 Handler modules (handlers/):
   message_sender.py   ─ safe_reply/safe_edit/safe_send + rate_limit_send
   message_queue.py    ─ Per-user queue + worker (merge, status dedup)
-  status_polling.py   ─ Background status line polling (1s interval)
+  status_polling.py   ─ Background status line polling (3s interval)
   response_builder.py ─ Response pagination and formatting
   interactive_ui.py   ─ AskUserQuestion / ExitPlanMode / Permission UI
   directory_browser.py─ Directory selection + session picker UI for new topics

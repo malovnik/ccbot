@@ -28,7 +28,7 @@ Per-user message queues + worker pattern for all send tasks:
 - `AIORateLimiter(max_retries=5)` on the Application (30/s global)
 - On 429, AIORateLimiter pauses all concurrent requests (`_retry_after_event`) and retries after the ban
 - On restart, the global bucket is pre-filled (`_level=max_rate`) to avoid burst against Telegram's persisted server-side counter
-- Status polling interval: 1 second (skips enqueue when queue is non-empty)
+- Status polling interval: 3 seconds (skips enqueue when queue is non-empty)
 
 ## Performance Optimizations
 
