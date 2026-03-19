@@ -697,13 +697,20 @@ class WsBridge:
         except OSError:
             pass
 
+        page_size = 50
+        total = len(messages)
+        total_pages = max(1, (total + page_size - 1) // page_size)
+        page = min(msg.offset, total_pages - 1) if msg.offset >= 0 else 0
+        start = page * page_size
+        end = start + page_size
+
         await self._send(
             client,
             WsHistory(
                 window_id=msg.window_id,
-                messages=messages,
-                page=0,
-                total_pages=1,
+                messages=messages[start:end],
+                page=page,
+                total_pages=total_pages,
             ),
         )
 

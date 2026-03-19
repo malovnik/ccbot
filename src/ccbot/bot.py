@@ -233,6 +233,15 @@ def _enqueue_batched_input(user_id: int, thread_id: int, wid: str, text: str) ->
     )
 
 
+def _cancel_input_buffer(user_id: int, thread_id: int) -> None:
+    """Cancel pending input buffer and timer for a topic."""
+    key = (user_id, thread_id)
+    _input_buffer.pop(key, None)
+    timer = _input_timer.pop(key, None)
+    if timer and not timer.done():
+        timer.cancel()
+
+
 # Topics that have been auto-named (skip re-naming on subsequent messages)
 _auto_named_topics: set[tuple[int, int]] = set()
 
@@ -535,6 +544,7 @@ async def unbind_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     session_manager.unbind_thread(user.id, thread_id)
     await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
     _auto_named_topics.discard((user.id, thread_id))
+    _cancel_input_buffer(user.id, thread_id)
 
     await safe_reply(
         update.message,
@@ -569,6 +579,7 @@ async def kill_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     session_manager.unbind_thread(user.id, thread_id)
     await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
     _auto_named_topics.discard((user.id, thread_id))
+    _cancel_input_buffer(user.id, thread_id)
 
     # Notify before deletion
     await safe_reply(update.message, f"Сессия '{display}' завершена. Топик удаляется.")
@@ -1004,6 +1015,7 @@ async def topic_closed_handler(
         # Clean up all memory state for this topic
         await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
         _auto_named_topics.discard((user.id, thread_id))
+        _cancel_input_buffer(user.id, thread_id)
     else:
         logger.debug(
             "Topic closed: no binding (user=%d, thread=%d)", user.id, thread_id
