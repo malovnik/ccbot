@@ -23,7 +23,7 @@ from .terminal_stream import TerminalStreamer
 
 from .config import config
 from .session import session_manager
-from .session_monitor import NewMessage
+from .session_monitor import NewMessage, _SENDABLE_EXTS
 from .tmux_manager import tmux_manager
 from .ws_protocol import (
     WsAuth,
@@ -616,14 +616,7 @@ class WsBridge:
                                 if fpath_str:
                                     fpath = Path(fpath_str).expanduser().resolve()
                                     ext = fpath.suffix.lower()
-                                    if ext in {
-                                        ".md",
-                                        ".txt",
-                                        ".pdf",
-                                        ".docx",
-                                        ".html",
-                                        ".csv",
-                                    }:
+                                    if ext in _SENDABLE_EXTS:
                                         messages.append(
                                             {
                                                 "role": role,
