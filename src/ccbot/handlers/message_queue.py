@@ -29,7 +29,6 @@ from telegram.constants import ChatAction
 from telegram.error import BadRequest, RetryAfter
 
 from ..config import config
-
 from ..session import session_manager
 from ..terminal_parser import parse_status_line
 from ..tmux_manager import tmux_manager

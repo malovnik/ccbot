@@ -20,10 +20,10 @@ def _setup_logging() -> logging.Logger:
         level=logging.WARNING,
     )
 
-    from .config import config
-
-    from logging.handlers import RotatingFileHandler
     import os as _os
+    from logging.handlers import RotatingFileHandler
+
+    from .config import config
 
     log_file = config.config_dir / "ccbot.log"
     file_handler = RotatingFileHandler(
@@ -55,8 +55,8 @@ def _run_web_only() -> None:
 
     logger = _setup_logging()
 
-    from .tmux_manager import tmux_manager
     from .session_monitor import SessionMonitor
+    from .tmux_manager import tmux_manager
     from .ws_bridge import WsBridge
 
     session = tmux_manager.get_or_create_session()
@@ -134,8 +134,9 @@ def main() -> None:
     logger.info("Tmux session '%s' ready", session.session_name)
 
     if with_web or config.ws_enabled:
-        from .ws_bridge import WsBridge
         import ccbot.ws_bridge as _ws_mod
+
+        from .ws_bridge import WsBridge
 
         _ws_mod.ws_bridge = WsBridge(host=config.ws_host, port=config.ws_port)
         logger.info(

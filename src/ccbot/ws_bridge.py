@@ -19,11 +19,10 @@ from typing import Any
 import websockets
 from websockets.asyncio.server import ServerConnection
 
-from .terminal_stream import TerminalStreamer
-
 from .config import config
 from .session import session_manager
-from .session_monitor import NewMessage, _SENDABLE_EXTS
+from .session_monitor import _SENDABLE_EXTS, NewMessage
+from .terminal_stream import TerminalStreamer
 from .tmux_manager import tmux_manager
 from .ws_protocol import (
     WsAuth,

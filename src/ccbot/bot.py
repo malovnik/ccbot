@@ -78,15 +78,16 @@ from .handlers.callback_data import (
     CB_DIR_UP,
     CB_HISTORY_NEXT,
     CB_HISTORY_PREV,
+    CB_KEYS_PREFIX,
+    CB_SCREENSHOT_REFRESH,
     CB_SESSION_CANCEL,
     CB_SESSION_NEW,
     CB_SESSION_SELECT,
-    CB_KEYS_PREFIX,
-    CB_SCREENSHOT_REFRESH,
     CB_WIN_BIND,
     CB_WIN_CANCEL,
     CB_WIN_NEW,
 )
+from .handlers.cleanup import clear_topic_state
 from .handlers.directory_browser import (
     BROWSE_DIRS_KEY,
     BROWSE_PAGE_KEY,
@@ -104,7 +105,6 @@ from .handlers.directory_browser import (
     clear_session_picker_state,
     clear_window_picker_state,
 )
-from .handlers.cleanup import clear_topic_state
 from .handlers.history import send_history
 from .handlers.interactive_ui import (
     INTERACTIVE_TOOL_NAMES,
@@ -129,13 +129,13 @@ from .handlers.message_sender import (
     safe_send,
     send_with_fallback,
 )
-from .markdown_v2 import convert_markdown
 from .handlers.response_builder import build_response_parts
 from .handlers.status_polling import (
     record_claude_response,
     record_user_activity,
     status_poll_loop,
 )
+from .markdown_v2 import convert_markdown
 from .screenshot import text_to_image
 from .session import session_manager
 from .session_monitor import NewMessage, SessionMonitor

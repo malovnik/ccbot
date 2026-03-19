@@ -10,7 +10,7 @@ Key class: TerminalStreamer — manages per-window capture loops.
 
 import asyncio
 import logging
-from typing import Callable, Awaitable
+from typing import Awaitable, Callable
 
 from .tmux_manager import tmux_manager
 

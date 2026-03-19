@@ -25,9 +25,9 @@ import asyncio
 import json
 import logging
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from collections.abc import Iterator
 from typing import Any
 
 import aiofiles
