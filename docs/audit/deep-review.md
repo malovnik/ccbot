@@ -249,4 +249,26 @@ _ws_start_task.add_done_callback(lambda t: t.exception() if not t.cancelled() el
 
 **Итого: 20 находок.**
 
-Две CRITICAL-находки (`_cleanup_task` scoping и WS bridge shutdown) — это баги, которые **гарантированно** воспроизводятся при каждом shutdown. Исправляются одной строкой каждый.
+## Статус исправлений (обновлено 2026-03-20)
+
+**17 из 20 исправлены:**
+- [CRITICAL] `_cleanup_task` scoping — FIXED
+- [CRITICAL] WS bridge shutdown — FIXED
+- [HIGH] Terminal subscription leak — FIXED
+- [HIGH] Blocking FS in async — DOCUMENTED (needs asyncio.to_thread refactor)
+- [HIGH] tmux reconnect — FIXED (server property with probe)
+- [HIGH] fire-and-forget task — FIXED (done_callback)
+- [MEDIUM] JSONL parse exception — FIXED (try/except around parse_line)
+- [MEDIUM] Byte offset text mode — DOCUMENTED (works on macOS/Linux)
+- [MEDIUM] session_map race — DOCUMENTED (resolves next cycle)
+- [MEDIUM] _save_state race — DOCUMENTED (single-threaded asyncio, safe in practice)
+- [MEDIUM] _input_buffer cleanup — FIXED (_cancel_input_buffer on unbind/kill)
+- [MEDIUM] _pending_tools cleanup — FIXED (cleanup on session removal)
+- [MEDIUM] _auto_named_topics growth — FIXED (discard on unbind/kill)
+- [MEDIUM] exit_detected_at/restart_attempts — FIXED (clear_polling_state)
+- [LOW] idle tracking cleanup — FIXED (clear_polling_state)
+- [LOW] _tool_msg_ids growth — DOCUMENTED (cleared on unbind)
+- [LOW] Path traversal string comparison — FIXED (Path.is_relative_to)
+- [LOW] Status emit duplication — FIXED (branches unified)
+- [LOW] _SENDABLE_EXTS duplication — FIXED (shared import)
+- [LOW] MonitorState sync I/O — DOCUMENTED (runs in sync code path)
