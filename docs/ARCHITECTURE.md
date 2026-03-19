@@ -96,7 +96,7 @@ Singleton конфигурации. Загружает переменные ок
 - Валидация обязательных переменных при старте
 - Парсинг `ALLOWED_USERS` в множество int
 - Резолв `CCBOT_ALLOWED_ROOTS` с проверкой существования директорий
-- Скрабинг 6 чувствительных переменных из `os.environ` после загрузки (`TELEGRAM_BOT_TOKEN`, `OPENAI_API_KEY`, `DEEPGRAM_API_KEY`, `ANTHROPIC_API_KEY`, `CLAUDE_API_KEY`, `CCBOT_WS_TOKEN`)
+- Скрабинг 6 чувствительных переменных из `os.environ` после загрузки (`TELEGRAM_BOT_TOKEN`, `ALLOWED_USERS`, `OPENAI_API_KEY`, `OPENAI_BASE_URL`, `DEEPGRAM_API_KEY`, `CCBOT_WS_TOKEN`)
 
 Зависимости: `python-dotenv`, `utils`.
 
