@@ -209,10 +209,12 @@ class SessionMonitor:
         """Synchronous project scanner — runs in a thread via asyncio.to_thread."""
         sessions: list[SessionInfo] = []
 
-        if not self.projects_path.exists():
+        try:
+            entries = list(self.projects_path.iterdir())
+        except (OSError, FileNotFoundError):
             return sessions
 
-        for project_dir in self.projects_path.iterdir():
+        for project_dir in entries:
             if not project_dir.is_dir():
                 continue
 
