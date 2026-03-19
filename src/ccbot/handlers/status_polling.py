@@ -58,6 +58,20 @@ _last_claude_response: dict[tuple[int, int], float] = {}
 _idle_reminder_sent: set[tuple[int, int]] = set()
 
 
+def clear_polling_state(user_id: int, thread_id: int, window_id: str | None = None) -> None:
+    """Clean up all polling-related state for a topic.
+
+    Called from clear_topic_state when a topic is unbound/killed.
+    """
+    key = (user_id, thread_id)
+    _last_user_activity.pop(key, None)
+    _last_claude_response.pop(key, None)
+    _idle_reminder_sent.discard(key)
+    if window_id:
+        _exit_detected_at.pop(window_id, None)
+        _restart_attempts.pop(window_id, None)
+
+
 def record_user_activity(user_id: int, thread_id: int) -> None:
     """Record that the user sent a message. Resets idle reminder."""
     key = (user_id, thread_id)

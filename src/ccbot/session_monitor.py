@@ -338,7 +338,16 @@ class SessionMonitor:
                 # likely a partial write; stop and retry next cycle.
                 safe_offset = session.last_byte_offset
                 async for line in f:
-                    data = TranscriptParser.parse_line(line)
+                    try:
+                        data = TranscriptParser.parse_line(line)
+                    except Exception as parse_err:
+                        logger.warning(
+                            "Malformed JSONL in session %s, skipping line: %s",
+                            session.session_id,
+                            parse_err,
+                        )
+                        safe_offset = await f.tell()
+                        continue
                     if data:
                         new_entries.append(data)
                         safe_offset = await f.tell()

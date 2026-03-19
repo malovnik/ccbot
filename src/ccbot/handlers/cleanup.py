@@ -42,6 +42,12 @@ async def clear_topic_state(
     # Clear interactive UI state (also deletes message from chat)
     await clear_interactive_msg(user_id, bot, thread_id)
 
+    # Clear polling state (idle tracking, restart attempts)
+    # Deferred import to avoid circular dependency (status_polling → cleanup → status_polling)
+    from .status_polling import clear_polling_state
+
+    clear_polling_state(user_id, thread_id)
+
     # Clear pending thread state from user_data
     if user_data is not None:
         if user_data.get("_pending_thread_id") == thread_id:

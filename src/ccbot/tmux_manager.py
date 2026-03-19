@@ -53,7 +53,13 @@ class TmuxManager:
 
     @property
     def server(self) -> libtmux.Server:
-        """Get or create tmux server connection."""
+        """Get or create tmux server connection. Reconnects if stale."""
+        if self._server is not None:
+            try:
+                self._server.sessions
+            except Exception:
+                logger.warning("Tmux server connection stale, reconnecting")
+                self._server = None
         if self._server is None:
             self._server = libtmux.Server()
         return self._server

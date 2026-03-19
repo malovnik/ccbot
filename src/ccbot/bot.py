@@ -534,6 +534,7 @@ async def unbind_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     display = session_manager.get_display_name(wid)
     session_manager.unbind_thread(user.id, thread_id)
     await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
+    _auto_named_topics.discard((user.id, thread_id))
 
     await safe_reply(
         update.message,
@@ -567,6 +568,7 @@ async def kill_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     await tmux_manager.kill_window(wid)
     session_manager.unbind_thread(user.id, thread_id)
     await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
+    _auto_named_topics.discard((user.id, thread_id))
 
     # Notify before deletion
     await safe_reply(update.message, f"Сессия '{display}' завершена. Топик удаляется.")
@@ -1001,6 +1003,7 @@ async def topic_closed_handler(
         session_manager.unbind_thread(user.id, thread_id)
         # Clean up all memory state for this topic
         await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
+        _auto_named_topics.discard((user.id, thread_id))
     else:
         logger.debug(
             "Topic closed: no binding (user=%d, thread=%d)", user.id, thread_id
