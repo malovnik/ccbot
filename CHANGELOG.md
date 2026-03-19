@@ -1,5 +1,67 @@
 # Changelog
 
+## [Fork] 2026-03-20 — WebSocket Bridge Merge + Full Revision
+
+### WebSocket Bridge (from malovlab)
+- `ws_bridge.py`, `ws_protocol.py`, `terminal_stream.py` — WS server for web frontend
+- `ccbot web` mode and `--with-web` flag for parallel Telegram + WS
+- 26 typed dataclass message types, HMAC auth, rate limiting (60/min per connection)
+- Terminal diff-capture streaming, history pagination (50 msg/page)
+
+### Security (2 HIGH, 2 MEDIUM fixed)
+- `_handle_resume_session` — added `allowed_roots` + `is_dir()` validation
+- Server path disclosure — all WS messages use `~/relative` format via `_display_path()`
+- Auth timeout 30s for WS connections
+- Text length limit 4096 in `_handle_send_message`
+- `Path.is_relative_to()` replacing string-based path comparison
+- File name limit 255 chars on upload
+
+### Bug Fixes (2 CRITICAL, 4 HIGH)
+- `_cleanup_task` missing `global` in `post_init` — task never cancelled on shutdown
+- WS bridge not stopped in `post_shutdown`
+- Terminal subscription leak on WS client disconnect
+- tmux server reconnect on stale connection
+- Malformed JSONL lines skip instead of blocking monitoring
+- Fire-and-forget WS bridge task — added error callback
+
+### Memory Leak Prevention
+- `clear_polling_state()` — cleans idle tracking, restart attempts on unbind
+- `_auto_named_topics` cleanup on unbind/kill/topic_close
+- `_pending_tools`, `_working_status_active`, `_last_tool_status` cleanup on session removal
+- `_cancel_input_buffer()` on unbind/kill — prevents messages to dead windows
+
+### Code Quality
+- `_ensure_formatted` deduplicated (import from message_sender)
+- `_SENDABLE_EXTS` unified between session_monitor and ws_bridge
+- `_is_path_allowed()` helper for consistent `allowed_roots` checks
+- Status emit deduplication in session_monitor
+- Import sorting (ruff I001)
+- Restored lost `CCBOT_SHOW_TOOL_CALLS` feature
+
+### Scripts
+- `scripts/start.sh` — full startup with dependency check and hook install
+- `scripts/stop.sh` — graceful shutdown
+- `scripts/restart.sh` — rewritten for macOS compatibility (ps instead of pstree)
+
+### Documentation (Russian)
+- `README_RU.md` — full feature overview, quick start, all commands, all env vars
+- `docs/ARCHITECTURE.md` — system diagram, all modules, data flows
+- `docs/DEPLOYMENT.md` — requirements, installation, configuration, troubleshooting
+- `docs/FEATURES.md` — all features with usage instructions
+- `CLAUDE.md` updated with WS bridge section
+
+### Tests
+- 268 → 318 tests (+50 new)
+- WS protocol serialize/parse (17), helper functions (18), edge cases (11), input buffer (4)
+
+### Audit Reports
+- `docs/audit/version-malovnik.md` — inventory of 24 modules
+- `docs/audit/version-malovlab.md` — malovlab additions
+- `docs/audit/diff-versions.md` — comparison and merge strategy
+- `docs/audit/security.md` — full security audit
+- `docs/audit/deep-review.md` — 20 findings, 17 fixed
+- `docs/audit/docs-qa.md` — documentation QA
+
 ## [Fork] 2026-03-15 — Enhanced Onboarding: /start + native /help
 
 **`/start`**: Now shows concise capabilities overview: input types (text, photo, voice, documents), key features (edit forwarding, reactions, auto-naming), and pointer to `/help`.
