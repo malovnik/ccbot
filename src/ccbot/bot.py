@@ -2972,9 +2972,11 @@ async def post_init(application: Application) -> None:
     if _ws_bridge is not None:
         _ws_task = asyncio.create_task(_ws_bridge.start())
         _ws_task.add_done_callback(
-            lambda t: logger.error("WS bridge task failed: %s", t.exception())
-            if not t.cancelled() and t.exception()
-            else None
+            lambda t: (
+                logger.error("WS bridge task failed: %s", t.exception())
+                if not t.cancelled() and t.exception()
+                else None
+            )
         )
         monitor.add_message_callback(_ws_bridge.on_new_message)
         logger.info("WS bridge callback registered with session monitor")

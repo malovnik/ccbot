@@ -100,6 +100,13 @@ def _is_path_allowed(path: Path) -> bool:
     return any(path.is_relative_to(root) for root in config.allowed_roots)
 
 
+def _display_path(path: Path) -> str:
+    """Convert absolute path to display-safe ~/relative format."""
+    if path.is_relative_to(Path.home()):
+        return "~/" + str(path.relative_to(Path.home()))
+    return str(path)
+
+
 class WsBridge:
     """WebSocket bridge server exposing CCBot to web frontends."""
 
@@ -387,7 +394,7 @@ class WsBridge:
                 {
                     "window_id": w.window_id,
                     "name": w.window_name,
-                    "cwd": w.cwd,
+                    "cwd": _display_path(Path(w.cwd)),
                     "session_id": ws_state.session_id if ws_state else "",
                     "active": True,
                 }
@@ -436,7 +443,7 @@ class WsBridge:
             WsSessionCreated(
                 window_id=window_id,
                 name=window_name,
-                cwd=str(path),
+                cwd=_display_path(path),
             ),
         )
 
@@ -474,7 +481,7 @@ class WsBridge:
             WsSessionCreated(
                 window_id=window_id,
                 name=window_name,
-                cwd=str(path),
+                cwd=_display_path(path),
             ),
         )
 
@@ -729,7 +736,7 @@ class WsBridge:
         await self._send(
             client,
             WsDirectoryListing(
-                path=str(path),
+                path=_display_path(path),
                 dirs=dirs,
                 show_hidden=config.show_hidden_dirs,
             ),

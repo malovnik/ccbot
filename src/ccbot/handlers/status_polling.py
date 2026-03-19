@@ -58,7 +58,9 @@ _last_claude_response: dict[tuple[int, int], float] = {}
 _idle_reminder_sent: set[tuple[int, int]] = set()
 
 
-def clear_polling_state(user_id: int, thread_id: int, window_id: str | None = None) -> None:
+def clear_polling_state(
+    user_id: int, thread_id: int, window_id: str | None = None
+) -> None:
     """Clean up all polling-related state for a topic.
 
     Called from clear_topic_state when a topic is unbound/killed.
