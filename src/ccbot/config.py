@@ -101,6 +101,7 @@ class Config:
         )
 
         self.show_user_messages = _getbool("CCBOT_SHOW_USER_MESSAGES", False)
+        self.show_tool_calls = _getbool("CCBOT_SHOW_TOOL_CALLS", True)
         self.clean_output = _getbool("CCBOT_CLEAN_OUTPUT", True)
         self.show_hidden_dirs = _getbool("CCBOT_SHOW_HIDDEN_DIRS", False)
 
