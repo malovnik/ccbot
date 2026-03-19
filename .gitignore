@@ -71,3 +71,6 @@ venv.bak/
 docs/chat_*
 docs/superpowers/
 static_analysis_semgrep_*/
+
+# Claude Code / Ralph Loop
+.claude/ralph-loop.local.md
