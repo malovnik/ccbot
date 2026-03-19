@@ -18,11 +18,18 @@ if ! tmux list-windows -t "$TMUX_SESSION" -F '#{window_name}' 2>/dev/null | grep
     exit 1
 fi
 
-# Get the pane PID and check if uv run ccbot is running
+# Get the pane PID
 PANE_PID=$(tmux list-panes -t "$TARGET" -F '#{pane_pid}')
 
 is_ccbot_running() {
-    pstree -a "$PANE_PID" 2>/dev/null | grep -q 'uv.*run ccbot\|ccbot.*\.venv/bin/ccbot'
+    # macOS-compatible: use ps to find ccbot among children of the pane shell
+    ps -o pid=,command= -g "$PANE_PID" 2>/dev/null | grep -q 'ccbot\|uv.*run.*ccbot' || \
+    ps -o pid=,command= -p "$PANE_PID" 2>/dev/null | grep -q 'ccbot\|uv.*run.*ccbot'
+}
+
+find_ccbot_pid() {
+    # Find the uv/ccbot process PID among children
+    ps -o pid=,command= -g "$PANE_PID" 2>/dev/null | grep 'uv.*run.*ccbot\|\.venv/bin/ccbot' | awk '{print $1}' | head -1
 }
 
 # Stop existing process if running
@@ -40,16 +47,18 @@ if is_ccbot_running; then
 
     if is_ccbot_running; then
         echo "Process did not exit after ${MAX_WAIT}s, sending SIGTERM..."
-        # Kill the uv process directly
-        UV_PID=$(pstree -ap "$PANE_PID" 2>/dev/null | grep -oP 'uv,\K\d+' | head -1)
-        if [ -n "$UV_PID" ]; then
-            kill "$UV_PID" 2>/dev/null || true
+        CCBOT_PID=$(find_ccbot_pid)
+        if [ -n "$CCBOT_PID" ]; then
+            kill "$CCBOT_PID" 2>/dev/null || true
             sleep 2
         fi
         if is_ccbot_running; then
             echo "Process still running, sending SIGKILL..."
-            kill -9 "$UV_PID" 2>/dev/null || true
-            sleep 1
+            CCBOT_PID=$(find_ccbot_pid)
+            if [ -n "$CCBOT_PID" ]; then
+                kill -9 "$CCBOT_PID" 2>/dev/null || true
+                sleep 1
+            fi
         fi
     fi
 

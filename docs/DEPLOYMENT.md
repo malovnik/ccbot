@@ -226,17 +226,22 @@ uv run ccbot --with-web
 uv run ccbot web
 ```
 
-### Запуск в tmux (рекомендуется для серверов)
+### Запуск через скрипт (рекомендуется)
 
 ```bash
-# Создать tmux-сессию ccbot
-tmux new-session -d -s ccbot
+./scripts/start.sh
+```
 
-# Создать окно для самого бота
-tmux new-window -t ccbot -n __main__
+Скрипт:
+1. Проверяет зависимости (tmux, uv, .env)
+2. Устанавливает Claude Code хук если не установлен
+3. Создаёт tmux-сессию `ccbot` с окном `__main__`
+4. Запускает бот
 
-# Запустить бота в этом окне
-tmux send-keys -t ccbot:__main__ "cd /path/to/ccbot && uv run ccbot" Enter
+### Остановка
+
+```bash
+./scripts/stop.sh
 ```
 
 ### Перезапуск
@@ -245,12 +250,19 @@ tmux send-keys -t ccbot:__main__ "cd /path/to/ccbot && uv run ccbot" Enter
 ./scripts/restart.sh
 ```
 
-Скрипт:
-1. Находит процесс ccbot в tmux-окне `__main__`
-2. Отправляет Ctrl-C, ожидает завершения (до 10 секунд)
-3. При необходимости отправляет SIGTERM/SIGKILL
-4. Запускает бот заново
-5. Проверяет успешность запуска
+### Ручной запуск в tmux
+
+```bash
+tmux new-session -d -s ccbot -n __main__
+tmux send-keys -t ccbot:__main__ "cd /path/to/ccbot && uv run ccbot" Enter
+```
+
+### Управление
+
+```bash
+tmux attach -t ccbot          # подключиться к сессии
+tail -f ~/.ccbot/ccbot.log    # логи в реальном времени
+```
 
 ### Настройка Telegram-группы
 
