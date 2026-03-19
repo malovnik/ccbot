@@ -255,7 +255,7 @@ _ws_start_task.add_done_callback(lambda t: t.exception() if not t.cancelled() el
 - [CRITICAL] `_cleanup_task` scoping — FIXED
 - [CRITICAL] WS bridge shutdown — FIXED
 - [HIGH] Terminal subscription leak — FIXED
-- [HIGH] Blocking FS in async — DOCUMENTED (needs asyncio.to_thread refactor)
+- [HIGH] Blocking FS in async — FIXED (scan_projects → asyncio.to_thread, load_session_map → asyncio.to_thread)
 - [HIGH] tmux reconnect — FIXED (server property with probe)
 - [HIGH] fire-and-forget task — FIXED (done_callback)
 - [MEDIUM] JSONL parse exception — FIXED (try/except around parse_line)

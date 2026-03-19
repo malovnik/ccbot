@@ -502,13 +502,12 @@ class SessionManager:
         Also cleans up window_states entries not in current session_map.
         Updates window_display_names from the "window_name" field in values.
         """
-        if not config.session_map_file.exists():
-            return
         try:
-            async with aiofiles.open(config.session_map_file, "r") as f:
-                content = await f.read()
+            content = await asyncio.to_thread(
+                config.session_map_file.read_text, encoding="utf-8"
+            )
             session_map = json.loads(content)
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, FileNotFoundError):
             return
 
         prefix = f"{config.tmux_session_name}:"

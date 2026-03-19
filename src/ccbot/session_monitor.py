@@ -195,12 +195,19 @@ class SessionMonitor:
         return cwds
 
     async def scan_projects(self) -> list[SessionInfo]:
-        """Scan projects that have active tmux windows."""
+        """Scan projects that have active tmux windows.
+
+        Delegates filesystem-heavy work to a thread to avoid blocking the event loop.
+        """
         active_cwds = await self._get_active_cwds()
         if not active_cwds:
             return []
 
-        sessions = []
+        return await asyncio.to_thread(self._scan_projects_sync, active_cwds)
+
+    def _scan_projects_sync(self, active_cwds: set[str]) -> list[SessionInfo]:
+        """Synchronous project scanner — runs in a thread via asyncio.to_thread."""
+        sessions: list[SessionInfo] = []
 
         if not self.projects_path.exists():
             return sessions
@@ -215,8 +222,7 @@ class SessionMonitor:
 
             if index_file.exists():
                 try:
-                    async with aiofiles.open(index_file, "r") as f:
-                        content = await f.read()
+                    content = index_file.read_text(encoding="utf-8")
                     index_data = json.loads(content)
                     entries = index_data.get("entries", [])
                     original_path = index_data.get("originalPath", "")
@@ -256,12 +262,9 @@ class SessionMonitor:
                     if session_id in indexed_ids:
                         continue
 
-                    # Determine project_path for this file
                     file_project_path = original_path
                     if not file_project_path:
-                        file_project_path = await asyncio.to_thread(
-                            read_cwd_from_jsonl, jsonl_file
-                        )
+                        file_project_path = read_cwd_from_jsonl(jsonl_file)
                     if not file_project_path:
                         dir_name = project_dir.name
                         if dir_name.startswith("-"):
