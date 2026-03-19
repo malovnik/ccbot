@@ -10,7 +10,7 @@ Provides background polling of terminal status lines for all active users:
     + unbinds thread)
 
 Key components:
-  - STATUS_POLL_INTERVAL: Polling frequency (1 second)
+  - STATUS_POLL_INTERVAL: Polling frequency (3 seconds)
   - TOPIC_CHECK_INTERVAL: Topic existence probe frequency (60 seconds)
   - status_poll_loop: Background polling task
   - update_status_message: Poll and enqueue status updates

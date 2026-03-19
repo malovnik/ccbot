@@ -156,12 +156,18 @@ class WsBridge:
             return
 
         # Handle file messages (Write tool detected by SessionMonitor)
-        logger.debug("on_new_message: type=%s role=%s file=%s text_len=%d",
-                     msg.content_type, msg.role, msg.file_path, len(msg.text))
+        logger.debug(
+            "on_new_message: type=%s role=%s file=%s text_len=%d",
+            msg.content_type,
+            msg.role,
+            msg.file_path,
+            len(msg.text),
+        )
         if msg.content_type == "file" and msg.file_path:
             fpath = Path(msg.file_path).resolve()
             if fpath.exists() and fpath.is_file():
                 from .ws_protocol import WsFileMessage
+
                 file_msg = WsFileMessage(
                     window_id=window_id,
                     file_path=str(fpath),
@@ -190,16 +196,18 @@ class WsBridge:
         # Send status update for tool calls
         if msg.content_type in ("tool_use", "thinking"):
             from .ws_protocol import WsStatus
+
             status_text = msg.tool_name or "Думаю..."
             if msg.content_type == "tool_use" and msg.tool_name:
                 status_text = f"⏳ {msg.tool_name}"
             elif msg.content_type == "thinking":
                 status_text = "🧠 Думаю..."
-            await self.broadcast(serialize(WsStatus(
-                window_id=window_id, text=status_text
-            )))
+            await self.broadcast(
+                serialize(WsStatus(window_id=window_id, text=status_text))
+            )
         elif msg.is_complete:
             from .ws_protocol import WsStatusClear
+
             await self.broadcast(serialize(WsStatusClear(window_id=window_id)))
 
     # --- Connection handler ---
@@ -226,18 +234,27 @@ class WsBridge:
 
                 msg = parse_client_message(raw)
                 if msg is None:
-                    await self._send(client, WsError(code="parse_error", message="Invalid message"))
+                    await self._send(
+                        client, WsError(code="parse_error", message="Invalid message")
+                    )
                     continue
 
                 if not client.authenticated and not isinstance(msg, WsAuth):
-                    await self._send(client, WsError(code="auth_required", message="Authenticate first"))
+                    await self._send(
+                        client,
+                        WsError(code="auth_required", message="Authenticate first"),
+                    )
                     continue
 
                 if not client.check_rate_limit():
-                    await self._send(client, WsError(code="rate_limit", message="Too many messages"))
+                    await self._send(
+                        client, WsError(code="rate_limit", message="Too many messages")
+                    )
                     continue
 
-                logger.debug("WS recv type=%s from id=%d", getattr(msg, 'type', '?'), cid)
+                logger.debug(
+                    "WS recv type=%s from id=%d", getattr(msg, "type", "?"), cid
+                )
                 await self._dispatch(client, msg)
         except websockets.ConnectionClosed as e:
             logger.debug("WS connection closed: code=%s reason=%s", e.code, e.reason)
@@ -279,12 +296,19 @@ class WsBridge:
             case WsSubscribeTerminal():
                 w = await tmux_manager.find_window_by_id(msg.window_id)
                 if not w:
-                    await self._send(client, WsError(code="not_found", message="Window not found"))
+                    await self._send(
+                        client, WsError(code="not_found", message="Window not found")
+                    )
                 else:
                     client.terminal_subscriptions.add(msg.window_id)
-                    capture = await tmux_manager.capture_pane(msg.window_id, with_ansi=True)
+                    capture = await tmux_manager.capture_pane(
+                        msg.window_id, with_ansi=True
+                    )
                     if capture:
-                        await self._send(client, WsTerminalData(window_id=msg.window_id, data=capture))
+                        await self._send(
+                            client,
+                            WsTerminalData(window_id=msg.window_id, data=capture),
+                        )
                     self._streamer.subscribe(msg.window_id)
             case WsUnsubscribeTerminal():
                 client.terminal_subscriptions.discard(msg.window_id)
@@ -294,7 +318,9 @@ class WsBridge:
             case WsCaptureTerminal():
                 capture = await tmux_manager.capture_pane(msg.window_id, with_ansi=True)
                 if capture:
-                    await self._send(client, WsTerminalData(window_id=msg.window_id, data=capture))
+                    await self._send(
+                        client, WsTerminalData(window_id=msg.window_id, data=capture)
+                    )
 
     # --- Handlers ---
 
@@ -307,10 +333,16 @@ class WsBridge:
                 await self._send(client, WsAuthResult(success=True))
                 return
             # Non-localhost without token = reject
-            logger.warning("WS auth rejected: no CCBOT_WS_TOKEN configured for non-localhost binding")
-            await self._send(client, WsAuthResult(
-                success=False, error="CCBOT_WS_TOKEN required for non-localhost access"
-            ))
+            logger.warning(
+                "WS auth rejected: no CCBOT_WS_TOKEN configured for non-localhost binding"
+            )
+            await self._send(
+                client,
+                WsAuthResult(
+                    success=False,
+                    error="CCBOT_WS_TOKEN required for non-localhost access",
+                ),
+            )
             await client.ws.close(4001, "Unauthorized")
             return
         if hmac.compare_digest(msg.token.encode(), expected.encode()):
@@ -326,20 +358,27 @@ class WsBridge:
         sessions = []
         for w in windows:
             ws_state = session_manager.get_window_state(w.window_id)
-            sessions.append({
-                "window_id": w.window_id,
-                "name": w.window_name,
-                "cwd": w.cwd,
-                "session_id": ws_state.session_id if ws_state else "",
-                "active": True,
-            })
+            sessions.append(
+                {
+                    "window_id": w.window_id,
+                    "name": w.window_name,
+                    "cwd": w.cwd,
+                    "session_id": ws_state.session_id if ws_state else "",
+                    "active": True,
+                }
+            )
         await self._send(client, WsSessionList(sessions=sessions))
 
-    async def _handle_create_session(self, client: _ClientState, msg: WsCreateSession) -> None:
+    async def _handle_create_session(
+        self, client: _ClientState, msg: WsCreateSession
+    ) -> None:
         logger.info("WS create_session: path=%s", msg.path)
         path = Path(msg.path).expanduser().resolve()
         if not path.is_dir():
-            await self._send(client, WsError(code="invalid_path", message=f"Not a directory: {msg.path}"))
+            await self._send(
+                client,
+                WsError(code="invalid_path", message=f"Not a directory: {msg.path}"),
+            )
             return
 
         # Enforce ALLOWED_ROOTS boundary
@@ -347,7 +386,10 @@ class WsBridge:
             path == root or str(path).startswith(str(root) + "/")
             for root in config.allowed_roots
         ):
-            await self._send(client, WsError(code="access_denied", message="Path outside allowed roots"))
+            await self._send(
+                client,
+                WsError(code="access_denied", message="Path outside allowed roots"),
+            )
             return
 
         success, message, window_name, window_id = await tmux_manager.create_window(
@@ -357,21 +399,31 @@ class WsBridge:
             await self._send(client, WsError(code="tmux_error", message=message))
             return
 
-        logger.info("WS session created: window_id=%s name=%s cwd=%s", window_id, window_name, path)
+        logger.info(
+            "WS session created: window_id=%s name=%s cwd=%s",
+            window_id,
+            window_name,
+            path,
+        )
 
         # Wait for hook to register session (up to 5s)
         await session_manager.wait_for_session_map_entry(window_id, timeout=5.0)
 
-        await self._send(client, WsSessionCreated(
-            window_id=window_id,
-            name=window_name,
-            cwd=str(path),
-        ))
+        await self._send(
+            client,
+            WsSessionCreated(
+                window_id=window_id,
+                name=window_name,
+                cwd=str(path),
+            ),
+        )
 
         # Broadcast updated session list to all clients
         await self._handle_list_sessions(client)
 
-    async def _handle_resume_session(self, client: _ClientState, msg: WsResumeSession) -> None:
+    async def _handle_resume_session(
+        self, client: _ClientState, msg: WsResumeSession
+    ) -> None:
         path = Path(msg.path).expanduser().resolve()
 
         success, message, window_name, window_id = await tmux_manager.create_window(
@@ -382,44 +434,76 @@ class WsBridge:
             await self._send(client, WsError(code="tmux_error", message=message))
             return
 
-        await self._send(client, WsSessionCreated(
-            window_id=window_id,
-            name=window_name,
-            cwd=str(path),
-        ))
+        await self._send(
+            client,
+            WsSessionCreated(
+                window_id=window_id,
+                name=window_name,
+                cwd=str(path),
+            ),
+        )
 
-    async def _handle_kill_session(self, client: _ClientState, msg: WsKillSession) -> None:
+    async def _handle_kill_session(
+        self, client: _ClientState, msg: WsKillSession
+    ) -> None:
         w = await tmux_manager.find_window_by_id(msg.window_id)
         if not w:
-            await self._send(client, WsError(code="not_found", message="Window not found"))
+            await self._send(
+                client, WsError(code="not_found", message="Window not found")
+            )
             return
 
         await tmux_manager.kill_window(msg.window_id)
-        await self.broadcast(serialize(WsSessionEnded(window_id=msg.window_id, reason="killed")))
+        await self.broadcast(
+            serialize(WsSessionEnded(window_id=msg.window_id, reason="killed"))
+        )
 
-    async def _handle_send_message(self, client: _ClientState, msg: WsSendMessage) -> None:
+    async def _handle_send_message(
+        self, client: _ClientState, msg: WsSendMessage
+    ) -> None:
         success, error = await session_manager.send_to_window(msg.window_id, msg.text)
         if not success:
             await self._send(client, WsError(code="send_failed", message=error))
 
-    _ALLOWED_KEYS = frozenset({
-        "Escape", "Tab", "Up", "Down", "Left", "Right", "Space", "Enter",
-        "Home", "End", "PageUp", "PageDown", "Delete", "Backspace", "Insert",
-    })
+    _ALLOWED_KEYS = frozenset(
+        {
+            "Escape",
+            "Tab",
+            "Up",
+            "Down",
+            "Left",
+            "Right",
+            "Space",
+            "Enter",
+            "Home",
+            "End",
+            "PageUp",
+            "PageDown",
+            "Delete",
+            "Backspace",
+            "Insert",
+        }
+    )
 
     async def _handle_send_key(self, client: _ClientState, msg: WsSendKey) -> None:
         if msg.key not in self._ALLOWED_KEYS:
-            await self._send(client, WsError(code="invalid_key", message="Key not allowed"))
+            await self._send(
+                client, WsError(code="invalid_key", message="Key not allowed")
+            )
             return
 
         w = await tmux_manager.find_window_by_id(msg.window_id)
         if not w:
-            await self._send(client, WsError(code="not_found", message="Window not found"))
+            await self._send(
+                client, WsError(code="not_found", message="Window not found")
+            )
             return
 
         await tmux_manager.send_keys(msg.window_id, msg.key, enter=False, literal=False)
 
-    async def _handle_get_history(self, client: _ClientState, msg: WsGetHistory) -> None:
+    async def _handle_get_history(
+        self, client: _ClientState, msg: WsGetHistory
+    ) -> None:
         ws_state = session_manager.get_window_state(msg.window_id)
         if not ws_state or not ws_state.session_id or not ws_state.cwd:
             await self._send(client, WsHistory(window_id=msg.window_id, messages=[]))
@@ -434,8 +518,10 @@ class WsBridge:
         messages: list[dict[str, str]] = []
         try:
             import aiofiles
+
             async with aiofiles.open(session.file_path, "r", encoding="utf-8") as f:
                 import json as _json
+
                 async for line in f:
                     line = line.strip()
                     if not line:
@@ -466,10 +552,15 @@ class WsBridge:
                         elif block_type == "tool_use":
                             # Flush accumulated text first
                             if text_parts:
-                                messages.append({
-                                    "role": role, "content": "".join(text_parts),
-                                    "content_type": "text", "tool_name": "", "timestamp": ts,
-                                })
+                                messages.append(
+                                    {
+                                        "role": role,
+                                        "content": "".join(text_parts),
+                                        "content_type": "text",
+                                        "tool_name": "",
+                                        "timestamp": ts,
+                                    }
+                                )
                                 text_parts = []
                             tool_name = block.get("name", "")
                             tool_input = block.get("input", {})
@@ -480,15 +571,30 @@ class WsBridge:
                                 if fpath_str:
                                     fpath = Path(fpath_str).expanduser().resolve()
                                     ext = fpath.suffix.lower()
-                                    if ext in {".md", ".txt", ".pdf", ".docx", ".html", ".csv"}:
-                                        messages.append({
-                                            "role": role, "content": f"📄 {fpath.name}",
-                                            "content_type": "text", "tool_name": "Write",
-                                            "timestamp": ts,
-                                            "file_name": fpath.name,
-                                            "file_path": str(fpath),
-                                            "file_size": fpath.stat().st_size if fpath.exists() else 0,
-                                        })
+                                    if ext in {
+                                        ".md",
+                                        ".txt",
+                                        ".pdf",
+                                        ".docx",
+                                        ".html",
+                                        ".csv",
+                                    }:
+                                        messages.append(
+                                            {
+                                                "role": role,
+                                                "content": f"📄 {fpath.name}",
+                                                "content_type": "text",
+                                                "tool_name": "Write",
+                                                "timestamp": ts,
+                                                "file_name": fpath.name,
+                                                "file_path": str(fpath),
+                                                "file_size": str(
+                                                    fpath.stat().st_size
+                                                    if fpath.exists()
+                                                    else 0
+                                                ),
+                                            }
+                                        )
                                         continue
 
                             summary = f"{tool_name}()"
@@ -496,39 +602,64 @@ class WsBridge:
                                 first_val = next(iter(tool_input.values()), "")
                                 if isinstance(first_val, str) and first_val:
                                     summary = f"{tool_name}({first_val[:60]})"
-                            messages.append({
-                                "role": role, "content": summary,
-                                "content_type": "tool_use", "tool_name": tool_name, "timestamp": ts,
-                            })
+                            messages.append(
+                                {
+                                    "role": role,
+                                    "content": summary,
+                                    "content_type": "tool_use",
+                                    "tool_name": tool_name,
+                                    "timestamp": ts,
+                                }
+                            )
                         elif block_type == "thinking":
                             if text_parts:
-                                messages.append({
-                                    "role": role, "content": "".join(text_parts),
-                                    "content_type": "text", "tool_name": "", "timestamp": ts,
-                                })
+                                messages.append(
+                                    {
+                                        "role": role,
+                                        "content": "".join(text_parts),
+                                        "content_type": "text",
+                                        "tool_name": "",
+                                        "timestamp": ts,
+                                    }
+                                )
                                 text_parts = []
-                            messages.append({
-                                "role": role, "content": block.get("thinking", ""),
-                                "content_type": "thinking", "tool_name": "", "timestamp": ts,
-                            })
+                            messages.append(
+                                {
+                                    "role": role,
+                                    "content": block.get("thinking", ""),
+                                    "content_type": "thinking",
+                                    "tool_name": "",
+                                    "timestamp": ts,
+                                }
+                            )
 
                     # Flush remaining text
                     if text_parts:
-                        messages.append({
-                            "role": role, "content": "".join(text_parts),
-                            "content_type": "text", "tool_name": "", "timestamp": ts,
-                        })
+                        messages.append(
+                            {
+                                "role": role,
+                                "content": "".join(text_parts),
+                                "content_type": "text",
+                                "tool_name": "",
+                                "timestamp": ts,
+                            }
+                        )
         except OSError:
             pass
 
-        await self._send(client, WsHistory(
-            window_id=msg.window_id,
-            messages=messages,
-            page=0,
-            total_pages=1,
-        ))
+        await self._send(
+            client,
+            WsHistory(
+                window_id=msg.window_id,
+                messages=messages,
+                page=0,
+                total_pages=1,
+            ),
+        )
 
-    async def _handle_browse_directory(self, client: _ClientState, msg: WsBrowseDirectory) -> None:
+    async def _handle_browse_directory(
+        self, client: _ClientState, msg: WsBrowseDirectory
+    ) -> None:
         path = Path(msg.path).expanduser().resolve()
         if not path.is_dir():
             await self._send(client, WsDirectoryListing(path=msg.path))
@@ -539,10 +670,10 @@ class WsBridge:
             path == root or str(path).startswith(str(root) + "/")
             for root in config.allowed_roots
         ):
-            await self._send(client, WsError(
-                code="access_denied",
-                message="Path outside allowed roots"
-            ))
+            await self._send(
+                client,
+                WsError(code="access_denied", message="Path outside allowed roots"),
+            )
             return
 
         try:
@@ -555,11 +686,14 @@ class WsBridge:
         except (PermissionError, OSError):
             dirs = []
 
-        await self._send(client, WsDirectoryListing(
-            path=str(path),
-            dirs=dirs,
-            show_hidden=config.show_hidden_dirs,
-        ))
+        await self._send(
+            client,
+            WsDirectoryListing(
+                path=str(path),
+                dirs=dirs,
+                show_hidden=config.show_hidden_dirs,
+            ),
+        )
 
     async def _handle_binary(self, client: _ClientState, data: bytes) -> None:
         """Handle binary WebSocket frame.
@@ -567,7 +701,11 @@ class WsBridge:
         If pending_upload is set: save file and forward path to Claude.
         Otherwise: treat as voice audio and transcribe via Deepgram.
         """
-        logger.info("WS binary frame: %d bytes, pending_upload=%s", len(data), client._pending_upload)
+        logger.info(
+            "WS binary frame: %d bytes, pending_upload=%s",
+            len(data),
+            client._pending_upload,
+        )
         if client._pending_upload:
             window_id, file_name = client._pending_upload
             client._pending_upload = None
@@ -577,10 +715,14 @@ class WsBridge:
             from .transcribe import transcribe_voice
 
             text = await transcribe_voice(data)
-            logger.info("WS voice transcription: %d bytes -> %d chars", len(data), len(text))
+            logger.info(
+                "WS voice transcription: %d bytes -> %d chars", len(data), len(text)
+            )
         except Exception as e:
             logger.error("WS voice transcription failed: %s", e)
-            await self._send(client, WsError(code="transcribe_error", message="Transcription failed"))
+            await self._send(
+                client, WsError(code="transcribe_error", message="Transcription failed")
+            )
             return
 
         if not text.strip():
@@ -589,7 +731,9 @@ class WsBridge:
         # Find first active window to send transcribed text
         windows = await tmux_manager.list_windows()
         if not windows:
-            await self._send(client, WsError(code="no_session", message="Нет активных сессий"))
+            await self._send(
+                client, WsError(code="no_session", message="Нет активных сессий")
+            )
             return
 
         wid = windows[0].window_id
@@ -599,12 +743,15 @@ class WsBridge:
             return
 
         # Echo transcription back to client as user message
-        await self._send(client, WsMessage(
-            window_id=wid,
-            role="user",
-            content=f'🎤 "{text}"',
-            content_type="text",
-        ))
+        await self._send(
+            client,
+            WsMessage(
+                window_id=wid,
+                role="user",
+                content=f'🎤 "{text}"',
+                content_type="text",
+            ),
+        )
 
     # --- File upload ---
 
@@ -620,9 +767,7 @@ class WsBridge:
         upload_dir.mkdir(exist_ok=True)
 
         # Sanitize filename
-        safe_name = "".join(
-            c if c.isalnum() or c in ".-_" else "_" for c in file_name
-        )
+        safe_name = "".join(c if c.isalnum() or c in ".-_" else "_" for c in file_name)
         if not safe_name:
             safe_name = "upload"
 
@@ -635,22 +780,29 @@ class WsBridge:
             counter += 1
 
         file_path.write_bytes(data)
-        logger.info("WS file uploaded: %s (%d bytes) -> %s", file_name, len(data), file_path)
+        logger.info(
+            "WS file uploaded: %s (%d bytes) -> %s", file_name, len(data), file_path
+        )
 
         # Forward to Claude
         success, error = await session_manager.send_to_window(
             window_id, f"(file uploaded: {file_path})"
         )
         if not success:
-            await self._send(client, WsError(code="send_failed", message="Failed to forward file"))
+            await self._send(
+                client, WsError(code="send_failed", message="Failed to forward file")
+            )
             return
 
-        await self._send(client, WsMessage(
-            window_id=window_id,
-            role="user",
-            content=f"📎 {file_name}",
-            content_type="text",
-        ))
+        await self._send(
+            client,
+            WsMessage(
+                window_id=window_id,
+                role="user",
+                content=f"📎 {file_name}",
+                content_type="text",
+            ),
+        )
 
     # --- Terminal streaming ---
 

@@ -26,9 +26,7 @@ from .config import SENSITIVE_ENV_VARS, config
 
 logger = logging.getLogger(__name__)
 
-_UUID_RE = re.compile(
-    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$"
-)
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 
 
 @dataclass
@@ -234,8 +232,12 @@ class TmuxManager:
         """Check if Claude Code is running by verifying shell has child processes."""
         try:
             proc = await asyncio.create_subprocess_exec(
-                "tmux", "display-message", "-t", window_id,
-                "-p", "#{pane_pid}",
+                "tmux",
+                "display-message",
+                "-t",
+                window_id,
+                "-p",
+                "#{pane_pid}",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -246,7 +248,9 @@ class TmuxManager:
             if not pane_pid:
                 return False
             child_check = await asyncio.create_subprocess_exec(
-                "pgrep", "-P", pane_pid,
+                "pgrep",
+                "-P",
+                pane_pid,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )
@@ -272,11 +276,16 @@ class TmuxManager:
         """
         logger.info(
             "send_keys: window=%s, text_len=%d, literal=%s, enter=%s",
-            window_id, len(text), literal, enter,
+            window_id,
+            len(text),
+            literal,
+            enter,
         )
 
         if literal:
-            text = "".join(c for c in text if c == "\n" or (ord(c) >= 32) or (ord(c) > 127))
+            text = "".join(
+                c for c in text if c == "\n" or (ord(c) >= 32) or (ord(c) > 127)
+            )
 
         if literal and enter:
             # Split into text + delay + Enter via libtmux.

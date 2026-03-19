@@ -47,9 +47,7 @@ class TerminalStreamer:
             return False
         self._subscribers[window_id] = count + 1
         if window_id not in self._tasks or self._tasks[window_id].done():
-            self._tasks[window_id] = asyncio.create_task(
-                self._capture_loop(window_id)
-            )
+            self._tasks[window_id] = asyncio.create_task(self._capture_loop(window_id))
             logger.debug("Terminal stream started for %s", window_id)
         return True
 
@@ -85,9 +83,7 @@ class TerminalStreamer:
         try:
             while window_id in self._subscribers:
                 try:
-                    content = await tmux_manager.capture_pane(
-                        window_id, with_ansi=True
-                    )
+                    content = await tmux_manager.capture_pane(window_id, with_ansi=True)
                     if content and content != last_content:
                         last_content = content
                         await self._on_data(window_id, content)

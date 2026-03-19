@@ -11,11 +11,7 @@ from ccbot import transcribe
 DEEPGRAM_RESPONSE = {
     "results": {
         "channels": [
-            {
-                "alternatives": [
-                    {"transcript": "Hello world", "confidence": 0.99}
-                ]
-            }
+            {"alternatives": [{"transcript": "Hello world", "confidence": 0.99}]}
         ]
     }
 }
@@ -60,7 +56,11 @@ class TestTranscribeVoice:
 
     @pytest.mark.asyncio
     async def test_empty_transcription_raises(self, mock_config):
-        data = {"results": {"channels": [{"alternatives": [{"transcript": "", "confidence": 0.0}]}]}}
+        data = {
+            "results": {
+                "channels": [{"alternatives": [{"transcript": "", "confidence": 0.0}]}]
+            }
+        }
         resp = _mock_response(json_data=data)
         with patch.object(
             httpx.AsyncClient, "post", new_callable=AsyncMock, return_value=resp

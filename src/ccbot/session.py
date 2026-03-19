@@ -180,7 +180,6 @@ class SessionManager:
                         "Detected old-format state (window_name keys), "
                         "will re-resolve on startup"
                     )
-                    pass
 
             except (json.JSONDecodeError, ValueError) as e:
                 logger.warning("Failed to load state: %s", e)
@@ -189,7 +188,6 @@ class SessionManager:
                 self.thread_bindings = {}
                 self.window_display_names = {}
                 self.group_chat_ids = {}
-                pass
 
     async def resolve_stale_ids(self) -> None:
         """Re-resolve persisted window IDs against live tmux windows.
@@ -815,7 +813,10 @@ class SessionManager:
         """Send text to a tmux window by ID."""
         MAX_MESSAGE_LENGTH = 4096
         if len(text) > MAX_MESSAGE_LENGTH:
-            return False, f"Сообщение слишком длинное ({len(text)} символов, макс {MAX_MESSAGE_LENGTH})"
+            return (
+                False,
+                f"Сообщение слишком длинное ({len(text)} символов, макс {MAX_MESSAGE_LENGTH})",
+            )
 
         display = self.get_display_name(window_id)
         logger.info(

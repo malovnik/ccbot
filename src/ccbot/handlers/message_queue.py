@@ -30,24 +30,19 @@ from telegram.error import BadRequest, RetryAfter
 
 from ..config import config
 
-from ..markdown_v2 import convert_markdown
 from ..session import session_manager
 from ..terminal_parser import parse_status_line
 from ..tmux_manager import tmux_manager
 from .message_sender import (
     NO_LINK_PREVIEW,
     PARSE_MODE,
+    _ensure_formatted,
     send_photo,
     send_with_fallback,
     strip_sentinels,
 )
 
 logger = logging.getLogger(__name__)
-
-
-def _ensure_formatted(text: str) -> str:
-    """Convert markdown to MarkdownV2."""
-    return convert_markdown(text)
 
 
 # Merge limit for content messages

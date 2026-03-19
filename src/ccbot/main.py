@@ -118,6 +118,7 @@ def main() -> None:
     logger = _setup_logging()
 
     from importlib.metadata import version as pkg_version
+
     try:
         ver = pkg_version("ccbot")
     except Exception:
