@@ -183,14 +183,9 @@ class WsBridge:
             if fpath.exists() and fpath.is_file():
                 from .ws_protocol import WsFileMessage
 
-                relative_path = (
-                    str(fpath.relative_to(Path.home()))
-                    if fpath.is_relative_to(Path.home())
-                    else fpath.name
-                )
                 file_msg = WsFileMessage(
                     window_id=window_id,
-                    file_path=relative_path,
+                    file_path=_display_path(fpath),
                     file_name=fpath.name,
                     file_size=fpath.stat().st_size,
                     download_url="",
@@ -635,11 +630,7 @@ class WsBridge:
                                                 "tool_name": "Write",
                                                 "timestamp": ts,
                                                 "file_name": fpath.name,
-                                                "file_path": str(
-                                                    fpath.relative_to(Path.home())
-                                                )
-                                                if fpath.is_relative_to(Path.home())
-                                                else fpath.name,
+                                                "file_path": _display_path(fpath),
                                                 "file_size": str(
                                                     fpath.stat().st_size
                                                     if fpath.exists()
