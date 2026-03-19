@@ -384,8 +384,9 @@ class SessionMonitor:
                     # For new sessions, initialize offset to end of file
                     # to avoid re-processing old messages
                     try:
-                        file_size = session_info.file_path.stat().st_size
-                        current_mtime = session_info.file_path.stat().st_mtime
+                        st = session_info.file_path.stat()
+                        file_size = st.st_size
+                        current_mtime = st.st_mtime
                     except OSError:
                         file_size = 0
                         current_mtime = 0.0
@@ -647,6 +648,9 @@ class SessionMonitor:
             for session_id in stale_sessions:
                 self.state.remove_session(session_id)
                 self._file_mtimes.pop(session_id, None)
+                self._pending_tools.pop(session_id, None)
+                self._working_status_active.discard(session_id)
+                self._last_tool_status.pop(session_id, None)
             self.state.save_if_dirty()
 
     async def _detect_and_cleanup_changes(self) -> dict[str, str]:
@@ -689,6 +693,9 @@ class SessionMonitor:
             for session_id in sessions_to_remove:
                 self.state.remove_session(session_id)
                 self._file_mtimes.pop(session_id, None)
+                self._pending_tools.pop(session_id, None)
+                self._working_status_active.discard(session_id)
+                self._last_tool_status.pop(session_id, None)
             self.state.save_if_dirty()
 
         # Update last known map

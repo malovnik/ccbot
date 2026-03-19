@@ -171,7 +171,7 @@ class WsBridge:
 
                 relative_path = (
                     str(fpath.relative_to(Path.home()))
-                    if str(fpath).startswith(str(Path.home()))
+                    if fpath.is_relative_to(Path.home())
                     else fpath.name
                 )
                 file_msg = WsFileMessage(
@@ -277,6 +277,8 @@ class WsBridge:
             logger.debug("WS connection closed: code=%s reason=%s", e.code, e.reason)
         finally:
             auth_timer.cancel()
+            for wid in client.terminal_subscriptions:
+                self._streamer.unsubscribe(wid)
             client.terminal_subscriptions.clear()
             self._clients.pop(cid, None)
             logger.info("WS client disconnected: %s (id=%d)", remote, cid)
@@ -401,8 +403,7 @@ class WsBridge:
 
         # Enforce ALLOWED_ROOTS boundary
         if not any(
-            path == root or str(path).startswith(str(root) + "/")
-            for root in config.allowed_roots
+            path == root or path.is_relative_to(root) for root in config.allowed_roots
         ):
             await self._send(
                 client,
@@ -451,8 +452,7 @@ class WsBridge:
             return
 
         if not any(
-            path == root or str(path).startswith(str(root) + "/")
-            for root in config.allowed_roots
+            path == root or path.is_relative_to(root) for root in config.allowed_roots
         ):
             await self._send(
                 client,
@@ -635,9 +635,7 @@ class WsBridge:
                                                 "file_path": str(
                                                     fpath.relative_to(Path.home())
                                                 )
-                                                if str(fpath).startswith(
-                                                    str(Path.home())
-                                                )
+                                                if fpath.is_relative_to(Path.home())
                                                 else fpath.name,
                                                 "file_size": str(
                                                     fpath.stat().st_size
@@ -718,8 +716,7 @@ class WsBridge:
 
         # Enforce ALLOWED_ROOTS boundary
         if not any(
-            path == root or str(path).startswith(str(root) + "/")
-            for root in config.allowed_roots
+            path == root or path.is_relative_to(root) for root in config.allowed_roots
         ):
             await self._send(
                 client,

@@ -2914,7 +2914,7 @@ async def _run_startup_diagnostics(bot: Bot) -> None:
 
 
 async def post_init(application: Application) -> None:
-    global session_monitor, _status_poll_task, _bot_start_time
+    global session_monitor, _status_poll_task, _bot_start_time, _cleanup_task
 
     _bot_start_time = time.monotonic()
 
@@ -3052,6 +3052,12 @@ async def post_shutdown(application: Application) -> None:
     if session_monitor:
         session_monitor.stop()
         logger.info("Session monitor stopped")
+
+    from .ws_bridge import ws_bridge as _ws_bridge
+
+    if _ws_bridge is not None:
+        await _ws_bridge.stop()
+        logger.info("WS bridge stopped")
 
     await close_transcribe_client()
 
