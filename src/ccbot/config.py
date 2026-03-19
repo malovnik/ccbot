@@ -25,6 +25,7 @@ SENSITIVE_ENV_VARS = {
     "OPENAI_API_KEY",
     "OPENAI_BASE_URL",
     "DEEPGRAM_API_KEY",
+    "CCBOT_WS_TOKEN",
 }
 
 
@@ -154,6 +155,12 @@ class Config:
 
         # Deepgram API for voice message transcription (optional)
         self.deepgram_api_key: str = os.getenv("DEEPGRAM_API_KEY", "")
+
+        # WebSocket bridge for web frontend
+        self.ws_enabled = _getbool("CCBOT_WS_ENABLED", False)
+        self.ws_port = int(os.getenv("CCBOT_WS_PORT", "8765"))
+        self.ws_host = os.getenv("CCBOT_WS_HOST", "127.0.0.1")
+        self.ws_token: str = os.getenv("CCBOT_WS_TOKEN", "")
 
         # Scrub sensitive vars from os.environ so child processes never inherit them.
         # Values are already captured in Config attributes above.

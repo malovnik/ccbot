@@ -155,7 +155,7 @@ class SessionMonitor:
 
         self._running = False
         self._task: asyncio.Task | None = None
-        self._message_callback: Callable[[NewMessage], Awaitable[None]] | None = None
+        self._message_callbacks: list[Callable[[NewMessage], Awaitable[None]]] = []
         # Per-session pending tool_use state carried across poll cycles
         self._pending_tools: dict[str, dict[str, Any]] = {}  # session_id -> pending
         # Track last known session_map for detecting changes
@@ -171,7 +171,17 @@ class SessionMonitor:
     def set_message_callback(
         self, callback: Callable[[NewMessage], Awaitable[None]]
     ) -> None:
-        self._message_callback = callback
+        """Set the primary message callback (replaces existing). For backward compat."""
+        if self._message_callbacks:
+            self._message_callbacks[0] = callback
+        else:
+            self._message_callbacks.append(callback)
+
+    def add_message_callback(
+        self, callback: Callable[[NewMessage], Awaitable[None]]
+    ) -> None:
+        """Add an additional message callback (e.g. WS bridge)."""
+        self._message_callbacks.append(callback)
 
     async def _get_active_cwds(self) -> set[str]:
         """Get normalized cwds of all active tmux windows."""
@@ -717,11 +727,11 @@ class SessionMonitor:
                     status = "complete" if msg.is_complete else "streaming"
                     preview = msg.text[:80] + ("..." if len(msg.text) > 80 else "")
                     logger.info("[%s] session=%s: %s", status, msg.session_id, preview)
-                    if self._message_callback:
+                    for cb in self._message_callbacks:
                         try:
-                            await self._message_callback(msg)
+                            await cb(msg)
                         except Exception as e:
-                            logger.error(f"Message callback error: {e}")
+                            logger.error("Message callback error: %s", e)
 
             except Exception as e:
                 logger.error(f"Monitor loop error: {e}")

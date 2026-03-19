@@ -78,6 +78,27 @@ def _is_hook_installed(settings: dict) -> bool:
     return False
 
 
+def _update_hook_path(settings: dict, new_command: str) -> bool:
+    """Update ccbot hook command path if it changed. Returns True if updated."""
+    hooks = settings.get("hooks", {})
+    session_start = hooks.get("SessionStart", [])
+    updated = False
+
+    for entry in session_start:
+        if not isinstance(entry, dict):
+            continue
+        inner_hooks = entry.get("hooks", [])
+        for h in inner_hooks:
+            if not isinstance(h, dict):
+                continue
+            cmd = h.get("command", "")
+            if cmd == _HOOK_COMMAND_SUFFIX or cmd.endswith("/" + _HOOK_COMMAND_SUFFIX):
+                if cmd != new_command:
+                    h["command"] = new_command
+                    updated = True
+    return updated
+
+
 def _install_hook() -> int:
     """Install the ccbot hook into Claude's settings.json.
 
@@ -96,15 +117,27 @@ def _install_hook() -> int:
             print(f"Error reading {settings_file}: {e}", file=sys.stderr)
             return 1
 
-    # Check if already installed
-    if _is_hook_installed(settings):
-        logger.info("Hook already installed in %s", settings_file)
-        print(f"Hook already installed in {settings_file}")
-        return 0
-
     # Find the full path to ccbot
     ccbot_path = _find_ccbot_path()
     hook_command = f"{ccbot_path} hook"
+
+    # Check if already installed — update path if changed
+    if _is_hook_installed(settings):
+        updated = _update_hook_path(settings, hook_command)
+        if updated:
+            try:
+                settings_file.write_text(
+                    json.dumps(settings, indent=2, ensure_ascii=False) + "\n"
+                )
+            except OSError as e:
+                logger.error("Error writing %s: %s", settings_file, e)
+                return 1
+            logger.info("Hook path updated to %s", hook_command)
+            print(f"Hook path updated in {settings_file}")
+        else:
+            logger.info("Hook already installed in %s", settings_file)
+            print(f"Hook already installed in {settings_file}")
+        return 0
     hook_config = {"type": "command", "command": hook_command, "timeout": 5}
     logger.info("Installing hook command: %s", hook_command)
 
