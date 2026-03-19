@@ -610,23 +610,24 @@ class SessionMonitor:
         to be monitored until the hook re-fires with new format.
         Only entries matching our tmux_session_name are processed.
         """
+        return await asyncio.to_thread(self._load_current_session_map_sync)
+
+    def _load_current_session_map_sync(self) -> dict[str, str]:
+        """Synchronous session_map loader — runs in thread."""
         window_to_session: dict[str, str] = {}
-        if config.session_map_file.exists():
-            try:
-                async with aiofiles.open(config.session_map_file, "r") as f:
-                    content = await f.read()
-                session_map = json.loads(content)
-                prefix = f"{config.tmux_session_name}:"
-                for key, info in session_map.items():
-                    # Only process entries for our tmux session
-                    if not key.startswith(prefix):
-                        continue
-                    window_key = key[len(prefix) :]
-                    session_id = info.get("session_id", "")
-                    if session_id:
-                        window_to_session[window_key] = session_id
-            except (json.JSONDecodeError, OSError):
-                pass
+        try:
+            content = config.session_map_file.read_text(encoding="utf-8")
+            session_map = json.loads(content)
+            prefix = f"{config.tmux_session_name}:"
+            for key, info in session_map.items():
+                if not key.startswith(prefix):
+                    continue
+                window_key = key[len(prefix) :]
+                session_id = info.get("session_id", "")
+                if session_id:
+                    window_to_session[window_key] = session_id
+        except (json.JSONDecodeError, OSError, FileNotFoundError):
+            pass
         return window_to_session
 
     async def _cleanup_all_stale_sessions(self) -> None:
