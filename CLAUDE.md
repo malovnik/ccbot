@@ -2,7 +2,7 @@
 
 ccmux — Telegram bot that bridges Telegram Forum topics to Claude Code sessions via tmux windows. Each topic is bound to one tmux window running one Claude Code instance.
 
-Tech stack: Python, python-telegram-bot, tmux, uv.
+Tech stack: Python, python-telegram-bot, tmux, websockets, uv.
 
 ## Common Commands
 
@@ -51,6 +51,16 @@ Or manually in `~/.claude/settings.json`:
   }
 }
 ```
+
+## WebSocket Bridge
+
+Optional WS server for web frontend. Three modes:
+- `ccbot web` — standalone WS bridge (no Telegram bot)
+- `ccbot --with-web` — both Telegram bot + WS bridge
+- `CCBOT_WS_ENABLED=true` — same as `--with-web` via env var
+
+Config: `CCBOT_WS_HOST`, `CCBOT_WS_PORT`, `CCBOT_WS_TOKEN` (see `.env.example`).
+Modules: `ws_bridge.py`, `ws_protocol.py`, `terminal_stream.py`.
 
 ## Architecture Details
 
