@@ -67,6 +67,22 @@ CCBot is a single-user or small-group tool. It runs on a trusted local machine a
 | Stale thread unbind | `BadRequest("thread not found")` uses exact string match to unbind — no false positives | `handlers/message_queue.py` |
 | Memory cap | `_msg_thread_map` capped at 10k entries with 14-day TTL; forced eviction to 5k on overflow | `bot.py` |
 
+## WebSocket Bridge Security
+
+| Measure | Detail | Location |
+|---------|--------|----------|
+| Authentication | HMAC token comparison via `hmac.compare_digest` (timing-safe) | `ws_bridge.py` |
+| Auth timeout | Unauthenticated connections closed after 30 seconds | `ws_bridge.py` |
+| Rate limiting | 60 messages/minute per connection | `ws_bridge.py` |
+| Connection limit | Maximum 20 concurrent WebSocket connections | `ws_bridge.py` |
+| Message size limit | Maximum 1 MB per WebSocket frame; text messages capped at 4096 chars | `ws_bridge.py` |
+| File upload limit | Maximum 50 MB per upload; filename sanitized and capped at 255 chars | `ws_bridge.py` |
+| Key whitelist | `send_key` restricted to frozenset of allowed keys (Escape, Tab, arrows, etc.) | `ws_bridge.py` |
+| Path boundary | `allowed_roots` enforced on create_session, resume_session, and browse_directory | `ws_bridge.py` |
+| Path disclosure | All client-facing paths use `~/relative` format via `_display_path()` | `ws_bridge.py` |
+| Terminal subscription cleanup | Subscriptions unsubscribed on client disconnect (prevents capture task leak) | `ws_bridge.py` |
+| Localhost bypass | When binding to 127.0.0.1 without token, authentication is skipped (local dev only) | `ws_bridge.py` |
+
 ## Known Limitations
 
 **Single user-level boundary.** All security relies on Telegram user IDs. If an attacker gains access to an allowed user's Telegram account, they have full CCBot access.
