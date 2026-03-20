@@ -1,10 +1,10 @@
-"""Tests for hook installation flow."""
+"""Tests for hook installation flow and helper functions."""
 
 import json
 from pathlib import Path
 from unittest.mock import patch
 
-from ccbot.hook import _install_hook
+from ccbot.hook import _find_ccbot_path, _install_hook
 
 
 class TestInstallHook:
@@ -100,3 +100,24 @@ class TestInstallHook:
 
         assert result == 0
         assert settings_file.exists()
+
+
+class TestFindCcbotPath:
+    def test_finds_in_path(self) -> None:
+        with patch("ccbot.hook.shutil.which", return_value="/usr/local/bin/ccbot"):
+            result = _find_ccbot_path()
+        assert result == "/usr/local/bin/ccbot"
+
+    def test_finds_in_venv(self, tmp_path: Path) -> None:
+        fake_ccbot = tmp_path / "ccbot"
+        fake_ccbot.touch()
+        with patch("ccbot.hook.shutil.which", return_value=None):
+            with patch("ccbot.hook.sys.executable", str(tmp_path / "python")):
+                result = _find_ccbot_path()
+        assert result == str(fake_ccbot)
+
+    def test_fallback_to_bare_ccbot(self, tmp_path: Path) -> None:
+        with patch("ccbot.hook.shutil.which", return_value=None):
+            with patch("ccbot.hook.sys.executable", str(tmp_path / "python")):
+                result = _find_ccbot_path()
+        assert result == "ccbot"
