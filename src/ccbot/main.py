@@ -83,6 +83,71 @@ def _run_web_only() -> None:
     asyncio.run(run())
 
 
+def _show_status() -> None:
+    """Show current ccbot status: config, tmux sessions, state files."""
+    import json
+
+    from .utils import ccbot_dir
+
+    config_dir = ccbot_dir()
+    print(f"Config dir: {config_dir}")
+    print(f"  .env exists: {(config_dir / '.env').exists()}")
+
+    state_file = config_dir / "state.json"
+    session_map = config_dir / "session_map.json"
+
+    if session_map.exists():
+        try:
+            data = json.loads(session_map.read_text())
+            print(f"\nSession map: {len(data)} entries")
+            for key, info in data.items():
+                sid = info.get("session_id", "?")[:8]
+                wname = info.get("window_name", "?")
+                cwd = info.get("cwd", "?")
+                print(f"  {key}: {wname} (session {sid}...) @ {cwd}")
+        except (json.JSONDecodeError, OSError):
+            print("\nSession map: error reading")
+    else:
+        print("\nSession map: not found (no hook fired yet)")
+
+    if state_file.exists():
+        try:
+            data = json.loads(state_file.read_text())
+            bindings = data.get("thread_bindings", {})
+            total_bindings = sum(len(v) for v in bindings.values())
+            print(f"\nThread bindings: {total_bindings}")
+        except (json.JSONDecodeError, OSError):
+            print("\nState: error reading")
+    else:
+        print("\nState: not found (bot never started)")
+
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            [
+                "tmux",
+                "list-windows",
+                "-t",
+                "ccbot",
+                "-F",
+                "#{window_id} #{window_name} #{pane_current_path}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            windows = result.stdout.strip().split("\n")
+            print(f"\nTmux session 'ccbot': {len(windows)} windows")
+            for w in windows:
+                print(f"  {w}")
+        else:
+            print("\nTmux session 'ccbot': not found")
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        print("\nTmux: not available")
+
+
 def main() -> None:
     """Main entry point."""
     if len(sys.argv) > 1 and sys.argv[1] in ("--help", "-h"):
@@ -101,6 +166,11 @@ def main() -> None:
         print("  ccbot hook            Process Claude Code SessionStart hook")
         print("  ccbot hook --install  Install hook into Claude settings")
         print("  ccbot version         Show version")
+        print("  ccbot status          Show tmux sessions and config")
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "status":
+        _show_status()
         return
 
     if len(sys.argv) > 1 and sys.argv[1] == "version":
