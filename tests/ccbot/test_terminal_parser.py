@@ -5,6 +5,7 @@ import pytest
 from ccbot.terminal_parser import (
     extract_bash_output,
     extract_interactive_content,
+    parse_usage_output,
     is_interactive_ui,
     parse_status_line,
     strip_pane_chrome,
@@ -263,3 +264,51 @@ class TestExtractBashOutput:
         result = extract_bash_output(pane, "echo hi")
         assert result is not None
         assert not result.endswith("\n")
+
+
+# ── parse_usage_output ─────────────────────────────────────────────────
+
+
+class TestParseUsageOutput:
+    def test_empty_input(self):
+        assert parse_usage_output("") is None
+
+    def test_no_usage_header(self):
+        assert parse_usage_output("Some random\ntext output\n") is None
+
+    def test_valid_usage_output(self):
+        pane = (
+            "  Settings: Usage  API Keys\n"
+            "  API Requests:  42\n"
+            "  Tokens Used:   1,234\n"
+            "  Esc to close\n"
+        )
+        result = parse_usage_output(pane)
+        assert result is not None
+        assert len(result.parsed_lines) == 2
+        assert "API Requests" in result.parsed_lines[0]
+
+    def test_usage_without_esc_line(self):
+        pane = "  Settings: Usage  API Keys\n  Requests: 10\n"
+        result = parse_usage_output(pane)
+        assert result is not None
+        assert len(result.parsed_lines) == 1
+
+    def test_usage_with_progress_bars(self):
+        pane = "  Settings: Usage  API Keys\n  █████▋   38% used\n  Esc to close\n"
+        result = parse_usage_output(pane)
+        assert result is not None
+        assert any("38%" in line for line in result.parsed_lines)
+
+
+# ── parse_status_line edge cases ──────────────────────────────────────
+
+
+class TestParseStatusLineEdgeCases:
+    def test_no_chrome_separator(self):
+        assert parse_status_line("just plain text\nno separator") is None
+
+    def test_chrome_at_first_line(self):
+        pane = "───────────────────────\n·Working\nsome text"
+        result = parse_status_line(pane)
+        assert result is None  # no lines above chrome
