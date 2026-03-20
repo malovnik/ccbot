@@ -27,6 +27,16 @@ class TestCLIVersion:
             assert parts[0] == "ccbot"
 
 
+class TestCLIStatus:
+    def test_status_runs_without_crash(self) -> None:
+        with patch.object(sys, "argv", ["ccbot", "status"]):
+            buf = StringIO()
+            with patch("sys.stdout", buf):
+                main()
+            output = buf.getvalue()
+            assert "Config dir:" in output
+
+
 class TestCLIHelp:
     def test_help_flag(self) -> None:
         with patch.object(sys, "argv", ["ccbot", "--help"]):
