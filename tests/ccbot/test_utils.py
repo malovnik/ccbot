@@ -43,6 +43,17 @@ class TestAtomicWriteJson:
         atomic_write_json(target, data)
         assert json.loads(target.read_text(encoding="utf-8")) == data
 
+    def test_error_cleans_up_temp_file(self, tmp_path: Path):
+        target = tmp_path / "fail.json"
+        from unittest.mock import patch
+
+        with patch("ccbot.utils.os.replace", side_effect=OSError("disk full")):
+            with pytest.raises(OSError, match="disk full"):
+                atomic_write_json(target, {"data": True})
+        # Temp file should be cleaned up
+        remaining = list(tmp_path.glob(".*tmp*"))
+        assert remaining == []
+
     def test_no_temp_files_left_on_success(self, tmp_path: Path):
         target = tmp_path / "clean.json"
         atomic_write_json(target, {"ok": True})
