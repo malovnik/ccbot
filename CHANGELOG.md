@@ -51,8 +51,9 @@
 - `CLAUDE.md` updated with WS bridge section
 
 ### Tests
-- 268 → 318 tests (+50 new)
+- 268 → 348 tests (+80 new)
 - WS protocol serialize/parse (17), helper functions (18), edge cases (11), input buffer (4)
+- Pagination math (9), JSONL parse resilience (10), terminal stream (8), tmux reconnect (3)
 
 ### Audit Reports
 - `docs/audit/version-malovnik.md` — inventory of 24 modules
