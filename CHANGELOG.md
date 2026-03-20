@@ -51,9 +51,25 @@
 - `CLAUDE.md` updated with WS bridge section
 
 ### Tests
-- 268 → 348 tests (+80 new)
+- 268 → 377 tests (+109 new)
 - WS protocol serialize/parse (17), helper functions (18), edge cases (11), input buffer (4)
 - Pagination math (9), JSONL parse resilience (10), terminal stream (8), tmux reconnect (3)
+- CLI version/help/status (7), hook install flow (8), config 100% coverage (7)
+- Markdown table conversion (6), utils atomic write error (1)
+
+### CLI
+- `ccbot version` — version from package metadata
+- `ccbot status` — config, session map, tmux windows diagnostic
+- `ccbot --help` / `-h` — all available modes
+
+### Developer Experience
+- `Makefile` — check, test, lint, format, fix, typecheck, audit, start/stop/restart
+- `py.typed` marker (PEP 561)
+
+### Coverage highlights
+- config.py: 100%, ws_protocol.py: 100%, monitor_state.py: 98%
+- transcribe.py: 97%, telegram_sender.py: 97%, utils.py: 94%
+- markdown_v2.py: 89%, transcript_parser.py: 81%
 
 ### Audit Reports
 - `docs/audit/version-malovnik.md` — inventory of 24 modules
