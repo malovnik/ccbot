@@ -117,3 +117,62 @@ class TestConfigOpenAI:
         monkeypatch.setenv("OPENAI_API_KEY", "sk-secret")
         Config()
         assert os.environ.get("OPENAI_API_KEY") is None
+
+
+@pytest.mark.usefixtures("_base_env")
+class TestConfigAllowedRoots:
+    def test_default_allowed_roots(self, monkeypatch):
+        monkeypatch.delenv("CCBOT_ALLOWED_ROOTS", raising=False)
+        cfg = Config()
+        assert cfg.allowed_roots == [Path.home()]
+
+    def test_custom_allowed_roots(self, monkeypatch, tmp_path):
+        d1 = tmp_path / "proj1"
+        d2 = tmp_path / "proj2"
+        d1.mkdir()
+        d2.mkdir()
+        monkeypatch.setenv("CCBOT_ALLOWED_ROOTS", f"{d1},{d2}")
+        cfg = Config()
+        assert len(cfg.allowed_roots) == 2
+        assert d1.resolve() in cfg.allowed_roots
+        assert d2.resolve() in cfg.allowed_roots
+
+
+@pytest.mark.usefixtures("_base_env")
+class TestConfigLocalEnv:
+    def test_local_env_loaded(self, monkeypatch, tmp_path):
+        env_file = tmp_path / ".env"
+        env_file.write_text("TMUX_SESSION_NAME=from_local_env\n")
+        monkeypatch.chdir(tmp_path)
+        cfg = Config()
+        assert cfg.tmux_session_name == "from_local_env"
+
+
+@pytest.mark.usefixtures("_base_env")
+class TestConfigWsParams:
+    def test_ws_defaults(self):
+        cfg = Config()
+        assert cfg.ws_enabled is False
+        assert cfg.ws_port == 8765
+        assert cfg.ws_host == "127.0.0.1"
+        assert cfg.ws_token == ""
+
+    def test_ws_enabled(self, monkeypatch):
+        monkeypatch.setenv("CCBOT_WS_ENABLED", "true")
+        monkeypatch.setenv("CCBOT_WS_PORT", "9000")
+        monkeypatch.setenv("CCBOT_WS_HOST", "0.0.0.0")
+        monkeypatch.setenv("CCBOT_WS_TOKEN", "secret123")
+        cfg = Config()
+        assert cfg.ws_enabled is True
+        assert cfg.ws_port == 9000
+        assert cfg.ws_host == "0.0.0.0"
+        assert cfg.ws_token == "secret123"
+
+    def test_show_tool_calls_default(self):
+        cfg = Config()
+        assert cfg.show_tool_calls is True
+
+    def test_show_tool_calls_disabled(self, monkeypatch):
+        monkeypatch.setenv("CCBOT_SHOW_TOOL_CALLS", "false")
+        cfg = Config()
+        assert cfg.show_tool_calls is False
