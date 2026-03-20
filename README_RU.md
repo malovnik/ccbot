@@ -78,7 +78,9 @@ uv run ccbot hook --install
 **4. Запустить**
 
 ```bash
-uv run ccbot
+uv run ccbot            # Telegram бот
+uv run ccbot --help     # Справка по режимам
+uv run ccbot version    # Версия
 ```
 
 Бот работает в режиме Forum (Topics). Группа в Telegram должна иметь включенные топики. Каждый новый топик при первом сообщении предложит выбрать директорию проекта для создания сессии Claude Code.
