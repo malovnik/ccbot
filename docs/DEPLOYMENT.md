@@ -37,10 +37,11 @@ uv tool install git+https://github.com/malovnik/ccbot.git
 ### Проверка установки
 
 ```bash
-uv run ccbot hook --install  # или просто ccbot hook --install при глобальной установке
+uv run ccbot version         # версия пакета
+uv run ccbot hook --install  # установка хука Claude Code
+uv run ccbot status          # состояние: конфиг, сессии, tmux
+uv run ccbot --help          # все доступные режимы
 ```
-
-Если установка прошла корректно, команда выведет сообщение об установке хука.
 
 ## Настройка .env
 

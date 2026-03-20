@@ -327,6 +327,19 @@ WS bridge дублирует функциональность Telegram-бота 
 - `shlex.quote()` для --resume команд
 - Whitelist клавиш для WS send_key
 
+## CLI-команды
+
+| Команда | Описание |
+|---------|----------|
+| `ccbot` | Запуск Telegram-бота |
+| `ccbot --with-web` | Бот + WebSocket bridge параллельно |
+| `ccbot web` | Только WebSocket bridge (без Telegram) |
+| `ccbot hook` | Обработка хука Claude Code SessionStart |
+| `ccbot hook --install` | Установка хука в ~/.claude/settings.json |
+| `ccbot status` | Состояние: конфиг, session_map, tmux-окна |
+| `ccbot version` | Версия пакета |
+| `ccbot --help` | Справка по всем режимам |
+
 ## Ограничения и известные проблемы
 
 ### Архитектурные
