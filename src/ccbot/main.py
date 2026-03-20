@@ -85,6 +85,34 @@ def _run_web_only() -> None:
 
 def main() -> None:
     """Main entry point."""
+    if len(sys.argv) > 1 and sys.argv[1] in ("--help", "-h"):
+        from importlib.metadata import version as pkg_version
+
+        try:
+            ver = pkg_version("ccbot")
+        except Exception:
+            ver = "dev"
+        print(f"ccbot {ver} — Telegram bridge for Claude Code sessions")
+        print()
+        print("Usage:")
+        print("  ccbot                 Start Telegram bot")
+        print("  ccbot --with-web      Start bot + WebSocket bridge")
+        print("  ccbot web             Start WebSocket bridge only")
+        print("  ccbot hook            Process Claude Code SessionStart hook")
+        print("  ccbot hook --install  Install hook into Claude settings")
+        print("  ccbot version         Show version")
+        return
+
+    if len(sys.argv) > 1 and sys.argv[1] == "version":
+        from importlib.metadata import version as pkg_version
+
+        try:
+            ver = pkg_version("ccbot")
+        except Exception:
+            ver = "dev"
+        print(f"ccbot {ver}")
+        return
+
     if len(sys.argv) > 1 and sys.argv[1] == "hook":
         from .hook import hook_main
 
