@@ -19,7 +19,7 @@ Per-user message queues + worker pattern for all send tasks:
 - When a status message exists, the first content message updates it via edit
 - Subsequent content messages are sent as new messages
 
-**Polling**: Background task polls terminal status for all active windows at 1-second intervals. Send-layer rate limiting ensures flood control is not triggered.
+**Polling**: Background task polls terminal status for all active windows at 3-second intervals (`STATUS_POLL_INTERVAL`). Send-layer rate limiting ensures flood control is not triggered.
 
 **Deduplication**: The worker compares `last_text` when processing status updates; identical content skips the edit, reducing API calls.
 
@@ -35,6 +35,21 @@ Per-user message queues + worker pattern for all send tasks:
 **mtime cache**: The monitoring loop maintains an in-memory file mtime cache, skipping reads for unchanged files.
 
 **Byte offset incremental reads**: Each tracked session records `last_byte_offset`, reading only new content. File truncation (offset > file_size) is detected and offset is auto-reset.
+
+## Input Batching
+
+Fast consecutive user messages are batched via `_enqueue_batched_input` with a configurable debounce timer (`CCBOT_INPUT_BATCH_SECONDS`, default 1.5s). Messages accumulate in `_input_buffer` until the timer fires, then all are sent as one combined prompt. Timer and buffer are cancelled on unbind/kill via `_cancel_input_buffer`.
+
+## Topic Cleanup
+
+`clear_topic_state()` in `handlers/cleanup.py` is the single cleanup entry point, called on unbind, kill, and topic close. It clears:
+- Status message tracking (`_status_msg_info`)
+- Tool message IDs (`_tool_msg_ids`)
+- Interactive UI state
+- Polling state (idle tracking, restart attempts) via `clear_polling_state`
+- Pending thread state from `user_data`
+
+Additionally, `_auto_named_topics` and `_input_buffer` are cleared directly in bot.py handlers.
 
 ## No Message Truncation
 

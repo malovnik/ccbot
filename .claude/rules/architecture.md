@@ -85,7 +85,7 @@ Handler modules (handlers/):
   response_builder.py ─ Response pagination and formatting
   interactive_ui.py   ─ AskUserQuestion / ExitPlanMode / Permission UI
   directory_browser.py─ Directory selection + session picker UI for new topics
-  cleanup.py          ─ Topic state cleanup on close/delete
+  cleanup.py          ─ Unified topic cleanup (status, tools, interactive, polling, input)
   callback_data.py    ─ Callback data constants
 
 State files (~/.ccbot/ or $CCBOT_DIR/):
