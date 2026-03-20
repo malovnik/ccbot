@@ -64,18 +64,6 @@ SessionMonitor reads new message (session_id = "uuid-xxx")
 
 **Topic lifecycle**: Closing/deleting a topic auto-kills the associated tmux window and unbinds the thread. Stale bindings (window deleted externally) are cleaned up by the status polling loop.
 
-## WebSocket Bridge Integration
-
-When WS bridge is enabled (`CCBOT_WS_ENABLED=true` or `--with-web`):
-
-- SessionMonitor supports multiple callbacks (`add_message_callback`)
-- WS bridge registers as second callback alongside Telegram handler
-- New messages are delivered to both Telegram topics AND WS clients simultaneously
-- WS clients can create/resume/kill sessions, browse directories, send messages
-- Terminal streaming: WS clients can subscribe to real-time pane capture (200ms diff)
-- All WS operations enforce `allowed_roots` and auth token validation
-- WS bridge is stopped in `post_shutdown` alongside the Telegram bot
-
 ## Session Lifecycle
 
 **Startup cleanup**: On bot startup, all tracked sessions not present in session_map are cleaned up, preventing monitoring of closed sessions.
