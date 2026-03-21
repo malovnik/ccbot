@@ -64,7 +64,7 @@
 
 - [x] RM-00 — Архитектурный обзор
 - [x] RM-01 — Critical баги
-- [ ] RM-02 — Рефакторинг: command_handlers
+- [x] RM-02 — Рефакторинг: command_handlers
 - [ ] RM-03 — Рефакторинг: text_handler
 - [ ] RM-04 — Рефакторинг: callback_handler
 - [ ] RM-05 — Рефакторинг: session_lifecycle + финал
