@@ -28,6 +28,11 @@ _DEFAULT_PATTERNS: list[tuple[str, list[tuple[str, bool, bool]]]] = [
         "authorize Claude to modify its config files",
         [("y", True, True)],
     ),
+    # Pattern 3: file create/edit permission menu (v2.1.81+) — select "allow all edits"
+    (
+        "allow all edits during this session",
+        [("Down", False, False), ("Enter", False, False)],
+    ),
 ]
 
 
