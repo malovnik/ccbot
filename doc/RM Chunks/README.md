@@ -63,7 +63,7 @@
 ## Статус
 
 - [x] RM-00 — Архитектурный обзор
-- [ ] RM-01 — Critical баги
+- [x] RM-01 — Critical баги
 - [ ] RM-02 — Рефакторинг: command_handlers
 - [ ] RM-03 — Рефакторинг: text_handler
 - [ ] RM-04 — Рефакторинг: callback_handler

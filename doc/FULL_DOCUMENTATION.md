@@ -145,7 +145,7 @@ Handlers (handlers/):
 | `/history` | Показать историю сообщений текущей сессии с пагинацией |
 | `/screenshot` | Сделать скриншот терминала (PNG) |
 | `/esc` | Отправить Escape в Claude Code (прервать) |
-| `/kill` | ⚠️ **ФАНТОМ** — зарегистрирована в меню Telegram, но handler не реализован. Фактически перенаправляется в Claude Code через `forward_command_handler` |
+| `/kill` | Убить tmux окно + отвязать topic + очистить state. Подтверждение не требуется. |
 | `/unbind` | Отвязать topic от window (без kill) |
 | `/usage` | Показать статистику использования Claude Code (парсит TUI вывод) |
 | `/clear` | ↗ Forward в Claude Code — очистить историю разговора |

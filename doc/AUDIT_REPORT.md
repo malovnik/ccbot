@@ -19,22 +19,18 @@
 
 ## CRITICAL — Краши
 
-### C-1: `/kill` команда — фантом
-**Файл:** `bot.py:1821` (menu) + отсутствие handler в `bot.py:1893-1898`
+### C-1: ~~`/kill` команда — фантом~~ ✅ ИСПРАВЛЕНО (RM-01)
+**Файл:** `bot.py` — реализована `kill_command()` + `CommandHandler("kill", kill_command)`.
+Убивает tmux окно, unbind topic, cleanup state.
 
-Команда `/kill` зарегистрирована в меню Telegram, но **нет ни функции `kill_command`, ни `CommandHandler("kill", ...)`**. При нажатии `/kill` текст пробрасывается в Claude Code через `forward_command_handler` — вместо ожидаемого убийства окна.
+### C-2: ~~`config.py:130` — крах при импорте без env vars~~ ✅ НЕ АКТУАЛЬНО (RM-01)
+`main.py` уже ловит `ValueError` от `Config()` и показывает user-friendly сообщение. `hook.py` не импортирует config. Тесты вне скоупа. Дополнительный фикс не нужен.
 
-### C-2: `config.py:130` — крах при импорте без env vars
-`config = Config()` на уровне модуля. Если `TELEGRAM_BOT_TOKEN` не задан — `ValueError`. `main.py` обёрнут в try/except, но **любой тест или утилита, импортирующая `config`**, упадёт.
+### C-3: ~~`session.py:893` — крах при `OSError` на `state.json`~~ ✅ ИСПРАВЛЕНО (RM-01)
+Добавлен `OSError` в except clause `_load_state()`. Аналогичный фикс в `monitor_state.py`.
 
-### C-3: `session.py:893` — крах при `OSError` на `state.json`
-`SessionManager.__post_init__` вызывает `_load_state()`. Обработаны `json.JSONDecodeError` и `ValueError`, но **не `OSError`** (нет прав, диск полон). Крах при импорте.
-
-### C-4: `screenshot.py:170` — `ValueError` от ANSI кодов
-```python
-parts = [int(c) for c in codes.split(";") if c]
-```
-Малформатные ANSI-последовательности → `ValueError` → крах `screenshot_command` без обработки.
+### C-4: ~~`screenshot.py:170` — `ValueError` от ANSI кодов~~ ✅ ИСПРАВЛЕНО (RM-01)
+List comprehension заменён на цикл с try/except ValueError — malformed ANSI коды пропускаются.
 
 ---
 

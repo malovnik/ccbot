@@ -167,7 +167,13 @@ def _apply_ansi_codes(style: TextStyle, codes: str) -> TextStyle:
         bg_color=style.bg_color,
     )
 
-    parts = [int(c) for c in codes.split(";") if c]
+    parts = []
+    for c in codes.split(";"):
+        if c:
+            try:
+                parts.append(int(c))
+            except ValueError:
+                continue
     i = 0
     while i < len(parts):
         code = parts[i]

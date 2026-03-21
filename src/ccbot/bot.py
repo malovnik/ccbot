@@ -247,6 +247,52 @@ async def screenshot_command(
     )
 
 
+async def kill_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Kill the tmux window bound to this topic and unbind."""
+    user = update.effective_user
+    if not user or not is_user_allowed(user.id):
+        return
+    if not update.message:
+        return
+
+    thread_id = _get_thread_id(update)
+    if thread_id is None:
+        await safe_reply(update.message, "This command only works in a topic.")
+        return
+
+    wid = session_manager.get_window_for_thread(user.id, thread_id)
+    if not wid:
+        await safe_reply(update.message, "No session bound to this topic.")
+        return
+
+    display = session_manager.get_display_name(wid)
+    w = await tmux_manager.find_window_by_id(wid)
+    if w:
+        await tmux_manager.kill_window(w.window_id)
+        logger.info(
+            "/kill: killed window %s (user=%d, thread=%d)",
+            display,
+            user.id,
+            thread_id,
+        )
+    else:
+        logger.info(
+            "/kill: window %s already gone (user=%d, thread=%d)",
+            display,
+            user.id,
+            thread_id,
+        )
+
+    session_manager.unbind_thread(user.id, thread_id)
+    await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
+
+    await safe_reply(
+        update.message,
+        f"Session '{display}' killed and topic unbound.\n"
+        "Send a message to start a new session.",
+    )
+
+
 async def unbind_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Unbind this topic from its Claude session without killing the window."""
     user = update.effective_user
@@ -1768,7 +1814,10 @@ async def handle_new_message(msg: NewMessage, bot: Bot) -> None:
             await clear_interactive_msg(user_id, bot, thread_id)
 
         # Skip tool call notifications when CCBOT_SHOW_TOOL_CALLS=false
-        if not config.show_tool_calls and msg.content_type in ("tool_use", "tool_result"):
+        if not config.show_tool_calls and msg.content_type in (
+            "tool_use",
+            "tool_result",
+        ):
             continue
 
         parts = build_response_parts(
@@ -1894,6 +1943,7 @@ def create_bot() -> Application:
     application.add_handler(CommandHandler("history", history_command))
     application.add_handler(CommandHandler("screenshot", screenshot_command))
     application.add_handler(CommandHandler("esc", esc_command))
+    application.add_handler(CommandHandler("kill", kill_command))
     application.add_handler(CommandHandler("unbind", unbind_command))
     application.add_handler(CommandHandler("usage", usage_command))
     application.add_handler(CallbackQueryHandler(callback_handler))

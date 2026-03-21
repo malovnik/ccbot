@@ -182,7 +182,7 @@ class SessionManager:
                     )
                     pass
 
-            except (json.JSONDecodeError, ValueError) as e:
+            except (json.JSONDecodeError, ValueError, OSError) as e:
                 logger.warning("Failed to load state: %s", e)
                 self.window_states = {}
                 self.user_window_offsets = {}
