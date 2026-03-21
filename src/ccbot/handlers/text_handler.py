@@ -302,8 +302,8 @@ async def _capture_bash_output(
                             text=output,
                             link_preview_options=NO_LINK_PREVIEW,
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Bash capture: failed to edit message: %s", e)
 
             await asyncio.sleep(1.0)
     except asyncio.CancelledError:

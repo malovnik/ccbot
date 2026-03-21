@@ -89,8 +89,17 @@ class TmuxManager:
         for var in SENSITIVE_ENV_VARS:
             try:
                 session.unset_environment(var)
-            except Exception:
-                pass  # var not set in session env — nothing to remove
+            except Exception as e:
+                err_msg = str(e).lower()
+                if "unknown variable" in err_msg or "not set" in err_msg:
+                    pass  # var not set in session env — nothing to remove
+                else:
+                    logger.error(
+                        "Failed to scrub %s from tmux session: %s — "
+                        "secret may leak to child processes",
+                        var,
+                        e,
+                    )
 
     async def list_windows(self) -> list[TmuxWindow]:
         """List all windows in the session with their working directories.

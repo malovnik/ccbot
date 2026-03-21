@@ -57,14 +57,14 @@ List comprehension заменён на цикл с try/except ValueError — mal
 ### H-7: ~~`hook.py` — `subprocess.run` без timeout~~ ✅ ИСПРАВЛЕНО (RM-06)
 Добавлен `timeout=10` + `subprocess.TimeoutExpired` handling.
 
-### H-8: `_capture_bash_output` — double `pass` (bot.py:784-793)
-И MarkdownV2 edit, и plain-text fallback фейлят → вывод молча теряется.
+### H-8: ~~`_capture_bash_output` — double `pass`~~ ✅ ИСПРАВЛЕНО (RM-08)
+Inner `pass` заменён на `logger.warning` — теперь видно когда bash capture edit фейлит.
 
-### H-9: `safe_reply` re-raises (message_sender.py:146-147)
-`safe_reply` re-raises на двойном фейле, в отличие от `safe_send`/`safe_edit` (просто логируют). Inconsistent — необработанный exception в handlers.
+### H-9: ~~`safe_reply` re-raises~~ ✅ ИСПРАВЛЕНО (RM-08)
+`safe_reply` теперь логирует и возвращает (не re-raises), консистентно с `safe_edit`/`safe_send`.
 
-### H-10: `_scrub_session_env` — `except Exception: pass` (tmux_manager.py:91-93)
-Если `unset_environment` фейлит по другой причине (не "var not set") — `TELEGRAM_BOT_TOKEN` утечёт в Claude Code.
+### H-10: ~~`_scrub_session_env` — `except Exception: pass`~~ ✅ ИСПРАВЛЕНО (RM-08)
+Теперь фильтрует ошибку: "unknown variable"/"not set" = тихий pass, всё остальное = `logger.error` с предупреждением о возможной утечке секрета.
 
 ---
 

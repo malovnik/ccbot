@@ -144,7 +144,7 @@ async def safe_reply(message: Message, text: str, **kwargs: Any) -> Message:
             raise
         except Exception as e:
             logger.error(f"Failed to reply: {e}")
-            raise
+            return message  # Return original message to avoid crashing callers
 
 
 async def safe_edit(target: Any, text: str, **kwargs: Any) -> None:
