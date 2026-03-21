@@ -81,23 +81,22 @@ Inner `pass` заменён на `logger.warning` — теперь видно к
 - `model_command()` удалён
 - bot.py: "~1930 строк"
 
-### M-4: `monitor_state.py:74` — ненужный lazy import
-`from .utils import atomic_write_json` внутри метода без причины. Все остальные модули импортируют на верхнем уровне.
+### M-4: ~~`monitor_state.py:74` — ненужный lazy import~~ ✅ ИСПРАВЛЕНО (RM-12)
+Перенесён `from .utils import atomic_write_json` на уровень модуля.
 
-### M-5: `markdown_v2.py:15` — private API import
-`from telegramify_markdown import _update_block` — private API, может сломаться при обновлении.
+### M-5: ~~`markdown_v2.py:15` — private API import~~ ✅ ИСПРАВЛЕНО (RM-12)
+`telegramify-markdown` закреплён на `~=0.5.4` в pyproject.toml.
 
-### M-6: `scan_projects` — lossy path reconstruction (session_monitor.py:173-175)
-`dir_name.replace("-", "/")` заменяет ВСЕ дефисы — директории с дефисами (`my-project`) неправильно реконструируются.
+### M-6: ~~`scan_projects` — lossy path reconstruction~~ ✅ ИСПРАВЛЕНО (RM-12)
+Добавлена проверка `Path(candidate).exists()` перед использованием. Документировано как lossy fallback.
 
 ### M-7: `scripts/restart.sh` — Linux-only
 Использует `pstree -a` и `grep -P` — не работает на macOS. Hardcoded `TMUX_SESSION="ccbot"`.
 
-### M-8: CI не измеряет coverage
-`pytest-cov` в dev deps, но `--cov` не передаётся в CI pipeline.
+### M-8: CI не измеряет coverage — N/A (нет CI pipeline)
 
-### M-9: `_IMAGES_DIR.mkdir()` на уровне модуля (bot.py:559-560)
-Без try/except — если filesystem read-only → крах при импорте.
+### M-9: ~~`_IMAGES_DIR.mkdir()` на уровне модуля~~ ✅ ИСПРАВЛЕНО (RM-12)
+Обёрнут в try/except OSError в text_handler.py.
 
 ### M-10: ~~`topic_edited_handler` — не задокументирован~~ ✅ ИСПРАВЛЕНО (Ревизия 1/3)
 Добавлен в документацию как фича #30 (Topic Name Sync).

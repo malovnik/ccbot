@@ -74,6 +74,6 @@
 - [x] RM-09 — --dangerously-skip-permissions
 - [x] RM-10 — Auto-approve watcher
 - [ ] RM-11 — WebSocket merge
-- [ ] RM-12 — Medium баги
+- [x] RM-12 — Medium баги
 - [ ] RM-13 — Low баги + style
 - [ ] RM-14 — Документация + финальное ревью

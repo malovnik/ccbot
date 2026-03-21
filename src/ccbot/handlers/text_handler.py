@@ -65,7 +65,10 @@ logger = logging.getLogger(__name__)
 
 # --- Image directory for incoming photos ---
 _IMAGES_DIR = ccbot_dir() / "images"
-_IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+try:
+    _IMAGES_DIR.mkdir(parents=True, exist_ok=True)
+except OSError as e:
+    logger.warning("Cannot create images directory %s: %s", _IMAGES_DIR, e)
 
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

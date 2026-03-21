@@ -172,7 +172,12 @@ class SessionMonitor:
                     if not file_project_path:
                         dir_name = project_dir.name
                         if dir_name.startswith("-"):
-                            file_project_path = dir_name.replace("-", "/")
+                            # Best-effort decode: dashes→slashes. Lossy for
+                            # paths containing literal dashes, but this is a
+                            # last-resort fallback when JSONL has no cwd field.
+                            candidate = dir_name.replace("-", "/")
+                            if Path(candidate).exists():
+                                file_project_path = candidate
 
                     try:
                         norm_fp = str(Path(file_project_path).resolve())
