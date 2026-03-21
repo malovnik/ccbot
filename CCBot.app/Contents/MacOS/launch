@@ -37,6 +37,6 @@ check_cmd tmux "brew install tmux"
 osascript <<APPLESCRIPT
 tell application "Terminal"
     activate
-    do script "cd '$PROJECT_DIR' && echo '=== CCBot Starting ===' && echo '' && echo 'Syncing dependencies...' && uv sync 2>&1 && echo '' && echo 'Starting CCBot...' && echo '(Close this window to stop)' && echo '' && uv run ccbot; echo ''; echo 'CCBot stopped. Press any key to close.'; read -n1"
+    do script "export PATH=\"$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH\" && cd '$PROJECT_DIR' && echo '=== CCBot Starting ===' && echo '' && echo 'Pulling latest code...' && git pull --ff-only 2>&1 && echo '' && echo 'Syncing dependencies...' && uv sync 2>&1 && echo '' && echo 'Starting CCBot...' && echo '(Close this window to stop)' && echo '' && uv run ccbot; echo ''; echo 'CCBot stopped. Press any key to close.'; read -n1"
 end tell
 APPLESCRIPT
