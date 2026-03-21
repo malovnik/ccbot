@@ -80,6 +80,7 @@ Handler modules (handlers/):
   response_builder.py ─ Response pagination and formatting
   interactive_ui.py   ─ AskUserQuestion / ExitPlanMode / Permission UI
   directory_browser.py─ Directory selection + session picker UI for new topics
+  history.py          ─ Paginated message history (/history command)
   cleanup.py          ─ Topic state cleanup on close/delete
   callback_data.py    ─ Callback data constants
 
@@ -100,3 +101,25 @@ State files (~/.ccbot/ or $CCBOT_DIR/):
 - Only sessions registered in `session_map.json` (via hook) are monitored.
 - Notifications delivered to users via thread bindings (topic → window_id → session).
 - **Startup re-resolution** — Window IDs reset on tmux server restart. On startup, `resolve_stale_ids()` matches persisted display names against live windows to re-map IDs. Old state.json files keyed by window name are auto-migrated.
+
+## Planned Changes (Roadmap RM-00..14)
+
+> See `doc/ARCHITECTURE_DECISIONS.md` for full ADRs.
+
+### bot.py Decomposition (RM-02..05)
+bot.py (1931 lines) will be split into:
+- `handlers/command_handlers.py` — /start, /history, /screenshot, /esc, /kill (~300 lines)
+- `handlers/text_handler.py` — text_handler, handle_new_message, photo, voice (~400 lines)
+- `handlers/callback_handler.py` — callback routing (all CB_* prefixes) (~300 lines)
+- `handlers/session_lifecycle.py` — window creation, topic handlers (~400 lines)
+- `bot.py` — wiring only (~250 lines)
+
+### New Modules
+
+**auto_approve.py** (RM-10): Async watcher polling tmux panes for `.claude/` permission prompts. Per-window toggle from Telegram.
+
+**ws_protocol.py** (RM-11): 14 client→server + 13 server→client dataclasses for WebSocket protocol.
+
+**terminal_stream.py** (RM-11): Diff-based terminal capture at 200ms intervals, per-window subscriptions.
+
+**ws_bridge.py** (RM-11): WebSocket server — HMAC auth, sessions, history, messages, keys, files, voice, terminal streaming. Runs as parallel asyncio task.
