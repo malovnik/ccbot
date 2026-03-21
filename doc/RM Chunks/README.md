@@ -75,5 +75,5 @@
 - [x] RM-10 — Auto-approve watcher
 - [ ] RM-11 — WebSocket merge
 - [x] RM-12 — Medium баги
-- [ ] RM-13 — Low баги + style
+- [x] RM-13 — Low баги + style
 - [ ] RM-14 — Документация + финальное ревью

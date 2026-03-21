@@ -19,10 +19,10 @@ from pathlib import Path
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
-from ..session import ClaudeSession
-
 from ..config import config
+from ..session import ClaudeSession
 from .callback_data import (
+    CB_NOOP,
     CB_DIR_CANCEL,
     CB_DIR_CONFIRM,
     CB_DIR_PAGE,
@@ -168,7 +168,7 @@ def build_directory_browser(
                 InlineKeyboardButton("◀", callback_data=f"{CB_DIR_PAGE}{page - 1}")
             )
         nav.append(
-            InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data="noop")
+            InlineKeyboardButton(f"{page + 1}/{total_pages}", callback_data=CB_NOOP)
         )
         if page < total_pages - 1:
             nav.append(

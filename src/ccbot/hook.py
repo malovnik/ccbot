@@ -233,7 +233,7 @@ def hook_main() -> None:
     )
 
     # Read-modify-write with file locking to prevent concurrent hook races
-    from .utils import ccbot_dir
+    from .utils import atomic_write_json, ccbot_dir
 
     map_file = ccbot_dir() / "session_map.json"
     map_file.parent.mkdir(parents=True, exist_ok=True)
@@ -265,8 +265,6 @@ def hook_main() -> None:
                 if old_key != session_window_key and old_key in session_map:
                     del session_map[old_key]
                     logger.info("Removed old-format session_map key: %s", old_key)
-
-                from .utils import atomic_write_json
 
                 atomic_write_json(map_file, session_map)
                 logger.info(

@@ -34,6 +34,7 @@ from .callback_data import (
     CB_HISTORY_NEXT,
     CB_HISTORY_PREV,
     CB_KEYS_PREFIX,
+    CB_NOOP,
     CB_SCREENSHOT_REFRESH,
     CB_SESSION_CANCEL,
     CB_SESSION_NEW,
@@ -493,7 +494,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             logger.error(f"Failed to refresh screenshot: {e}")
             await query.answer("Failed to refresh", show_alert=True)
 
-    elif data == "noop":
+    elif data == CB_NOOP:
         await query.answer()
 
     # Interactive UI: Up arrow

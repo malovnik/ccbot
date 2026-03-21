@@ -16,7 +16,7 @@ from ..config import config
 from ..session import session_manager
 from ..telegram_sender import split_message
 from ..transcript_parser import TranscriptParser
-from .callback_data import CB_HISTORY_NEXT, CB_HISTORY_PREV
+from .callback_data import CB_HISTORY_NEXT, CB_HISTORY_PREV, CB_NOOP
 from .message_sender import safe_edit, safe_reply, safe_send
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ def _build_history_keyboard(
         )
 
     buttons.append(
-        InlineKeyboardButton(f"{page_index + 1}/{total_pages}", callback_data="noop")
+        InlineKeyboardButton(f"{page_index + 1}/{total_pages}", callback_data=CB_NOOP)
     )
 
     if page_index < total_pages - 1:
