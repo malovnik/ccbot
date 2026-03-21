@@ -118,6 +118,12 @@ class Config:
             else [Path.home()]
         )
 
+        # Directory browser start path (default: user home directory)
+        browse_start = os.getenv("CCBOT_BROWSE_START_DIR", "")
+        self.browse_start_dir: Path = (
+            Path(browse_start).expanduser().resolve() if browse_start else Path.home()
+        )
+
         # Auto-approve .claude/ self-edit permission prompts (watcher)
         self.auto_approve = os.getenv("CCBOT_AUTO_APPROVE", "true").lower() != "false"
 
