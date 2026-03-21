@@ -42,14 +42,14 @@ List comprehension заменён на цикл с try/except ValueError — mal
 ### H-2: ~~`queue.join()` без timeout~~ ✅ ИСПРАВЛЕНО (RM-06)
 Обёрнут в `asyncio.wait_for(queue.join(), timeout=30.0)` в text_handler.py.
 
-### H-3: Photo files не чистятся при ошибке (bot.py:613)
-Если `send_to_window` фейлит — файл `~/.ccbot/images/<timestamp>.jpg` остаётся навсегда.
+### H-3: ~~Photo files не чистятся при ошибке~~ ✅ ИСПРАВЛЕНО (RM-07)
+Добавлен cleanup `file_path.unlink()` при фейле `send_to_window` в text_handler.py.
 
-### H-4: `_merge_content_tasks` — fragile `task_done()` (message_queue.py:178-182)
-Двойной `task_done()` компенсация — риск `ValueError: task_done() called too many times`.
+### H-4: ~~`_merge_content_tasks` — fragile `task_done()`~~ ✅ НЕ АКТУАЛЬНО (RM-07)
+Логика task_done() корректна: компенсирует counter increment от put_nowait() при возврате не-merged элементов. Хорошо документировано в коде.
 
-### H-5: `UnicodeDecodeError` в session_monitor (session_monitor.py:369-370)
-`aiofiles.open` без `errors="replace"` → один non-UTF-8 байт в JSONL → мониторинг сессии навсегда останавливается.
+### H-5: ~~`UnicodeDecodeError` в session_monitor~~ ✅ ИСПРАВЛЕНО (RM-07)
+Добавлен `errors="replace"` в aiofiles.open для JSONL чтения.
 
 ### H-6: ~~`list_sessions_for_directory` — race condition~~ ✅ ИСПРАВЛЕНО (RM-06)
 `_safe_mtime()` helper с try/except OSError — пропускает удалённые файлы.

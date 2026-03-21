@@ -132,6 +132,11 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
     success, message = await session_manager.send_to_window(wid, text_to_send)
     if not success:
+        # Clean up downloaded file on send failure
+        try:
+            file_path.unlink(missing_ok=True)
+        except OSError:
+            pass
         await safe_reply(update.message, f"{message}")
         return
 
