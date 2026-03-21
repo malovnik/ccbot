@@ -67,7 +67,7 @@
 - [x] RM-02 — Рефакторинг: command_handlers
 - [x] RM-03 — Рефакторинг: text_handler
 - [x] RM-04 — Рефакторинг: callback_handler
-- [ ] RM-05 — Рефакторинг: session_lifecycle + финал
+- [x] RM-05 — Рефакторинг: session_lifecycle + финал
 - [ ] RM-06 — High: async/concurrency
 - [ ] RM-07 — High: data integrity
 - [ ] RM-08 — High: error handling

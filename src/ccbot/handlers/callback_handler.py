@@ -257,7 +257,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
             return
 
         # Lazy import to avoid circular dependency (bot.py owns _create_and_bind_window until RM-05)
-        from ..bot import _create_and_bind_window
+        from .session_lifecycle import _create_and_bind_window
 
         await _create_and_bind_window(
             query, context, user, selected_path, pending_thread_id
@@ -310,7 +310,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if context.user_data is not None:
             context.user_data.pop("_selected_path", None)
 
-        from ..bot import _create_and_bind_window
+        from .session_lifecycle import _create_and_bind_window
 
         await _create_and_bind_window(
             query,
@@ -339,7 +339,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if context.user_data is not None:
             context.user_data.pop("_selected_path", None)
 
-        from ..bot import _create_and_bind_window
+        from .session_lifecycle import _create_and_bind_window
 
         await _create_and_bind_window(query, context, user, selected_path, pending_tid)
 
