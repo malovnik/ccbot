@@ -1,43 +1,68 @@
-"""Auto-approve watcher — polls tmux panes for permission prompts.
+"""Auto-approve watcher — polls tmux panes for ALL permission prompts.
 
-Watches tmux panes for Claude Code's .claude/ self-edit permission prompts
-and automatically approves them. --dangerously-skip-permissions covers
-regular permission prompts but NOT .claude/ self-edit prompts.
+Watches tmux panes for Claude Code permission prompts and automatically
+approves them. Covers all prompt types:
+  - .claude/ self-edit prompts (not covered by --dangerously-skip-permissions)
+  - Bash command approval
+  - File create/edit/delete/overwrite permission
+  - General "Do you want to proceed?" prompts
 
 Per-window control: start/stop watcher per tmux window ID.
-Default patterns match current Claude Code versions.
+Patterns are checked in order — first match wins.
 """
 
 import asyncio
 import logging
+import re
 import time
 
 from .tmux_manager import tmux_manager
 
 logger = logging.getLogger(__name__)
 
-# (pattern_text, keys_to_send) — keys_to_send is a list of (key, enter, literal) tuples
-_DEFAULT_PATTERNS: list[tuple[str, list[tuple[str, bool, bool]]]] = [
-    # Pattern 1: .claude/ permission prompt (v2.1.80+) — select "Yes" and confirm
-    (
-        "allow Claude to edit its own settings",
-        [("Down", False, False), ("Enter", False, False)],
-    ),
-    # Pattern 2: older "authorize Claude to modify its config files" — type y + Enter
-    (
-        "authorize Claude to modify its config files",
-        [("y", True, True)],
-    ),
-    # Pattern 3: file create/edit permission menu (v2.1.81+) — select "allow all edits"
-    (
-        "allow all edits during this session",
-        [("Down", False, False), ("Enter", False, False)],
-    ),
+# Each pattern: (regex, keys_to_send)
+# keys_to_send: list of (key, enter, literal) tuples
+# Patterns checked in order — first match wins.
+#
+# Strategy for multi-choice menus:
+#   - "❯ 1. Yes" → Enter (already on Yes)
+#   - "allow all edits during this session" → Down to select it, then Enter
+#   - "Do you want to overwrite" with 3 choices → Down to "allow all", Enter
+#   - "Do you want to proceed?" with 2 choices → Enter (cursor on Yes)
+#   - "Bash command" approval → Enter (cursor on Yes)
+#   - .claude/ self-edit → Down to Yes, Enter
+
+_ENTER: list[tuple[str, bool, bool]] = [("Enter", False, False)]
+_DOWN_ENTER: list[tuple[str, bool, bool]] = [
+    ("Down", False, False),
+    ("Enter", False, False),
+]
+_Y_ENTER: list[tuple[str, bool, bool]] = [("y", True, True)]
+
+_DEFAULT_PATTERNS: list[tuple[re.Pattern[str], list[tuple[str, bool, bool]]]] = [
+    # --- "Allow all" shortcuts (check BEFORE generic prompts) ---
+    # File overwrite with "allow all edits" option — pick option 2
+    (re.compile(r"allow all edits during this session"), _DOWN_ENTER),
+    # .claude/ self-edit (v2.1.80+) — "allow Claude to edit its own settings"
+    (re.compile(r"allow Claude to edit its own settings"), _DOWN_ENTER),
+    # Older .claude/ prompt
+    (re.compile(r"authorize Claude to modify its config files"), _Y_ENTER),
+    # --- Generic permission prompts (cursor already on Yes) ---
+    # Numbered menu: ❯ 1. Yes — just Enter
+    (re.compile(r"❯\s*1\.\s*Yes"), _ENTER),
+    # "Do you want to proceed?" / "Do you want to overwrite X?" /
+    # "Do you want to make this edit" / "Do you want to create" /
+    # "Do you want to delete" — all start with "Do you want to"
+    (re.compile(r"Do you want to"), _ENTER),
+    # Bash command approval — "Bash command" header with "Esc to cancel"
+    (re.compile(r"This command requires approval"), _ENTER),
+    # "Contains backslash-escaped whitespace" warning with proceed prompt
+    (re.compile(r"Contains backslash-escaped whitespace"), _ENTER),
 ]
 
 
 class AutoApproveWatcher:
-    """Async watcher that auto-approves .claude/ permission prompts per window."""
+    """Async watcher that auto-approves permission prompts per window."""
 
     def __init__(self) -> None:
         self._tasks: dict[str, asyncio.Task[None]] = {}
@@ -76,13 +101,13 @@ class AutoApproveWatcher:
         return [wid for wid, task in self._tasks.items() if not task.done()]
 
     async def _watch_loop(self, window_id: str) -> None:
-        """Poll loop: check pane content for patterns every 2 seconds."""
+        """Poll loop: check pane content for patterns every 1.5 seconds."""
         cooldown_until = 0.0
         try:
             while True:
-                await asyncio.sleep(2.0)
+                await asyncio.sleep(1.5)
 
-                # Skip if in cooldown
+                # Skip if in cooldown (prevent double-approve)
                 now = time.monotonic()
                 if now < cooldown_until:
                     continue
@@ -100,12 +125,12 @@ class AutoApproveWatcher:
                 if not pane_text:
                     continue
 
-                # Check patterns
-                for pattern_text, keys in self._patterns:
-                    if pattern_text in pane_text:
+                # Check patterns (first match wins)
+                for pattern, keys in self._patterns:
+                    if pattern.search(pane_text):
                         logger.info(
                             "Auto-approve: matched '%s' in window %s",
-                            pattern_text,
+                            pattern.pattern,
                             window_id,
                         )
                         for key, enter, literal in keys:
@@ -115,6 +140,8 @@ class AutoApproveWatcher:
                                 enter=enter,
                                 literal=literal,
                             )
+                        # Cooldown: wait before checking again to prevent
+                        # double-approving the same prompt
                         cooldown_until = time.monotonic() + 3.0
                         break
         except asyncio.CancelledError:
