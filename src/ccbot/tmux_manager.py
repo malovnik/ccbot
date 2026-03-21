@@ -49,9 +49,11 @@ class TmuxManager:
 
     @property
     def server(self) -> libtmux.Server:
-        """Get or create tmux server connection."""
+        """Get or create tmux server connection (isolated socket)."""
         if self._server is None:
-            self._server = libtmux.Server()
+            self._server = libtmux.Server(
+                socket_name=config.tmux_socket_name,
+            )
         return self._server
 
     def get_session(self) -> libtmux.Session | None:

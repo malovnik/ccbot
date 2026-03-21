@@ -69,6 +69,10 @@ class Config:
         # Claude command to run in new windows
         self.claude_command = os.getenv("CLAUDE_COMMAND", "claude")
 
+        # Isolated tmux socket name (default: "ccbot" — separate from user's tmux)
+        # Uses `tmux -L <socket_name>` for full server isolation
+        self.tmux_socket_name: str = os.getenv("CCBOT_TMUX_SOCKET", "ccbot")
+
         # All state files live under config_dir
         self.state_file = self.config_dir / "state.json"
         self.session_map_file = self.config_dir / "session_map.json"
