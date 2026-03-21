@@ -68,7 +68,7 @@
 - [x] RM-03 — Рефакторинг: text_handler
 - [x] RM-04 — Рефакторинг: callback_handler
 - [x] RM-05 — Рефакторинг: session_lifecycle + финал
-- [ ] RM-06 — High: async/concurrency
+- [x] RM-06 — High: async/concurrency
 - [ ] RM-07 — High: data integrity
 - [ ] RM-08 — High: error handling
 - [ ] RM-09 — --dangerously-skip-permissions

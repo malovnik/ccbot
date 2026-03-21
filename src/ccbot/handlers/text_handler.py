@@ -525,7 +525,10 @@ async def handle_new_message(msg: NewMessage, bot: Bot) -> None:
             # Flush pending messages (e.g. plan content) before sending interactive UI
             queue = get_message_queue(user_id)
             if queue:
-                await queue.join()
+                try:
+                    await asyncio.wait_for(queue.join(), timeout=30.0)
+                except TimeoutError:
+                    logger.warning("Queue flush timed out for user %d", user_id)
             # Wait briefly for Claude Code to render the question UI
             await asyncio.sleep(0.3)
             handled = await handle_interactive_ui(bot, user_id, wid, thread_id)

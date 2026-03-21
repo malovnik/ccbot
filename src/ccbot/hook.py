@@ -193,18 +193,23 @@ def hook_main() -> None:
         logger.warning("TMUX_PANE not set, cannot determine window")
         return
 
-    result = subprocess.run(
-        [
-            "tmux",
-            "display-message",
-            "-t",
-            pane_id,
-            "-p",
-            "#{session_name}:#{window_id}:#{window_name}",
-        ],
-        capture_output=True,
-        text=True,
-    )
+    try:
+        result = subprocess.run(
+            [
+                "tmux",
+                "display-message",
+                "-t",
+                pane_id,
+                "-p",
+                "#{session_name}:#{window_id}:#{window_name}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        logger.error("tmux display-message timed out (pane=%s)", pane_id)
+        return
     raw_output = result.stdout.strip()
     # Expected format: "session_name:@id:window_name"
     parts = raw_output.split(":", 2)

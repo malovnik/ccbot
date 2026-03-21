@@ -473,8 +473,8 @@ class SessionManager:
             timeout,
         )
         key = f"{config.tmux_session_name}:{window_id}"
-        deadline = asyncio.get_event_loop().time() + timeout
-        while asyncio.get_event_loop().time() < deadline:
+        deadline = asyncio.get_running_loop().time() + timeout
+        while asyncio.get_running_loop().time() < deadline:
             try:
                 if config.session_map_file.exists():
                     async with aiofiles.open(config.session_map_file, "r") as f:
@@ -659,10 +659,17 @@ class SessionManager:
         if not project_dir.is_dir():
             return []
 
-        # Collect JSONL files sorted by mtime (newest first)
+        # Collect JSONL files sorted by mtime (newest first).
+        # Files may be deleted between glob() and stat() — skip missing ones.
+        def _safe_mtime(p: Path) -> float:
+            try:
+                return p.stat().st_mtime
+            except OSError:
+                return 0.0
+
         jsonl_files = sorted(
             project_dir.glob("*.jsonl"),
-            key=lambda p: p.stat().st_mtime,
+            key=_safe_mtime,
             reverse=True,
         )
 

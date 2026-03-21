@@ -36,11 +36,11 @@ List comprehension заменён на цикл с try/except ValueError — mal
 
 ## HIGH — Вероятные баги
 
-### H-1: Deprecated `asyncio.get_event_loop()` (session.py:476-477)
-`wait_for_session_map_entry` использует `asyncio.get_event_loop()` — deprecated с Python 3.10. Нужен `asyncio.get_running_loop()`.
+### H-1: ~~Deprecated `asyncio.get_event_loop()`~~ ✅ ИСПРАВЛЕНО (RM-06)
+Заменён на `asyncio.get_running_loop()` в session.py.
 
-### H-2: `queue.join()` без timeout (bot.py:1744-1746)
-`handle_new_message` вызывает `await queue.join()` — потенциальный deadlock если worker заблокирован flood control.
+### H-2: ~~`queue.join()` без timeout~~ ✅ ИСПРАВЛЕНО (RM-06)
+Обёрнут в `asyncio.wait_for(queue.join(), timeout=30.0)` в text_handler.py.
 
 ### H-3: Photo files не чистятся при ошибке (bot.py:613)
 Если `send_to_window` фейлит — файл `~/.ccbot/images/<timestamp>.jpg` остаётся навсегда.
@@ -51,11 +51,11 @@ List comprehension заменён на цикл с try/except ValueError — mal
 ### H-5: `UnicodeDecodeError` в session_monitor (session_monitor.py:369-370)
 `aiofiles.open` без `errors="replace"` → один non-UTF-8 байт в JSONL → мониторинг сессии навсегда останавливается.
 
-### H-6: `list_sessions_for_directory` — race condition (session.py:663-666)
-`glob()` + `stat()` — файл может быть удалён между вызовами → `FileNotFoundError`.
+### H-6: ~~`list_sessions_for_directory` — race condition~~ ✅ ИСПРАВЛЕНО (RM-06)
+`_safe_mtime()` helper с try/except OSError — пропускает удалённые файлы.
 
-### H-7: `hook.py` — `subprocess.run` без timeout (hook.py:196-207)
-tmux зависнет → hook зависнет → Claude Code убьёт процесс через 5s, но graceful handling потерян.
+### H-7: ~~`hook.py` — `subprocess.run` без timeout~~ ✅ ИСПРАВЛЕНО (RM-06)
+Добавлен `timeout=10` + `subprocess.TimeoutExpired` handling.
 
 ### H-8: `_capture_bash_output` — double `pass` (bot.py:784-793)
 И MarkdownV2 edit, и plain-text fallback фейлят → вывод молча теряется.
