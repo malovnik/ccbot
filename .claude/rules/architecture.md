@@ -2,19 +2,26 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                         Telegram Bot (bot.py)                       │
-│  - Topic-based routing: 1 topic = 1 window = 1 session             │
-│  - /history: Paginated message history (default: latest page)      │
-│  - /screenshot: Capture tmux pane as PNG                           │
-│  - /esc: Send Escape to interrupt Claude                           │
-│  - Send text → Claude Code via tmux keystrokes                     │
-│  - Forward /commands to Claude Code                                │
-│  - Create sessions via directory browser in unbound topics         │
-│  - Tool use → tool result: edit message in-place                   │
-│  - Interactive UI: AskUserQuestion / ExitPlanMode / Permission     │
-│  - Per-user message queue + worker (merge, rate limit)             │
-│  - MarkdownV2 output with auto fallback to plain text              │
+│                    Telegram Bot (bot.py — wiring only, ~247 lines)   │
+│  Registers all handlers, configures rate limiter, manages lifecycle  │
 ├──────────────────────┬──────────────────────────────────────────────┤
+│  Command Handlers    │  Text Handler (text_handler.py)              │
+│  (command_handlers)  │  - text_handler: route text → tmux           │
+│  - /start /history   │  - handle_new_message: Claude → Telegram     │
+│  - /screenshot /esc  │  - photo_handler: download → forward path    │
+│  - /kill /unbind     │  - voice_handler: transcribe → forward text  │
+│  - /usage            │  - _capture_bash_output: ! command output    │
+│  - forward_command   │                                              │
+├──────────────────────┼──────────────────────────────────────────────┤
+│  Callback Handler    │  Session Lifecycle (session_lifecycle.py)     │
+│  (callback_handler)  │  - topic_closed_handler: kill + cleanup      │
+│  - dir browser nav   │  - topic_edited_handler: rename sync         │
+│  - window/session    │  - _create_and_bind_window: create + bind    │
+│    picker selection   │                                              │
+│  - history paging    │                                              │
+│  - interactive UI    │                                              │
+│  - screenshot keys   │                                              │
+├──────────────────────┴──────────────────────────────────────────────┤
 │  markdown_v2.py      │  telegram_sender.py                         │
 │  MD → MarkdownV2     │  split_message (4096 limit)                 │
 │  + expandable quotes │                                             │
@@ -67,14 +74,43 @@
 │    after restart       │
 └────────────────────────┘
 
+┌─────────────────────────────────────────────────────────────────────┐
+│  WebSocket Layer (optional, enabled when CCBOT_WS_TOKEN is set)     │
+├──────────────────────┬──────────────────────────────────────────────┤
+│  ws_bridge.py        │  ws_protocol.py                              │
+│  - HMAC auth         │  - 14 client→server dataclasses              │
+│  - Rate limiting     │  - 14 server→client dataclasses              │
+│  - Session CRUD      │  - JSON serialize/parse                      │
+│  - Message routing   │                                              │
+│  - File upload       ├──────────────────────────────────────────────┤
+│  - Terminal stream   │  terminal_stream.py                          │
+│                      │  - Per-window capture loop (200ms)           │
+│                      │  - Diff-based delivery                       │
+│                      │  - Subscriber management                     │
+└──────────────────────┴──────────────────────────────────────────────┘
+
+┌────────────────────────┐
+│  AutoApproveWatcher    │
+│  (auto_approve.py)     │
+│  - Poll panes for      │
+│    .claude/ prompts    │
+│  - Auto-approve per    │
+│    window              │
+└────────────────────────┘
+
 Additional modules:
   screenshot.py       ─ Terminal text → PNG rendering (ANSI color, font fallback)
   transcribe.py       ─ Voice-to-text transcription via OpenAI API (gpt-4o-transcribe)
   main.py             ─ CLI entry point
   utils.py            ─ Shared utilities (ccbot_dir, atomic_write_json)
+  config.py           ─ Singleton Config, env var loading, sensitive var scrubbing
 
 Handler modules (handlers/):
-  message_sender.py   ─ safe_reply/safe_edit/safe_send + rate_limit_send
+  command_handlers.py ─ /start, /history, /screenshot, /esc, /kill, /unbind, /usage, forward
+  text_handler.py     ─ text routing, photo/voice handling, bash output capture
+  callback_handler.py ─ All inline keyboard callback routing (CB_* prefixes)
+  session_lifecycle.py─ Topic open/close/edit, window creation and binding
+  message_sender.py   ─ safe_reply/safe_edit/safe_send + MarkdownV2 fallback
   message_queue.py    ─ Per-user queue + worker (merge, status dedup)
   status_polling.py   ─ Background status line polling (1s interval)
   response_builder.py ─ Response pagination and formatting
@@ -101,25 +137,28 @@ State files (~/.ccbot/ or $CCBOT_DIR/):
 - Only sessions registered in `session_map.json` (via hook) are monitored.
 - Notifications delivered to users via thread bindings (topic → window_id → session).
 - **Startup re-resolution** — Window IDs reset on tmux server restart. On startup, `resolve_stale_ids()` matches persisted display names against live windows to re-map IDs. Old state.json files keyed by window name are auto-migrated.
+- **Modular handlers** — bot.py is wiring-only (~247 lines); all business logic lives in handler modules extracted during RM-02..05.
+- **Dangerous mode** — `--dangerously-skip-permissions` flag passed to Claude Code; auto-approve watcher covers remaining `.claude/` self-edit prompts.
+- **WebSocket layer** — Optional WS bridge for web frontend, sharing the same asyncio loop and singletons as the Telegram bot.
 
-## Planned Changes (Roadmap RM-00..14)
+## Completed Changes (Roadmap RM-00..14)
 
 > See `doc/ARCHITECTURE_DECISIONS.md` for full ADRs.
 
 ### bot.py Decomposition (RM-02..05)
-bot.py (1931 lines) will be split into:
-- `handlers/command_handlers.py` — /start, /history, /screenshot, /esc, /kill (~300 lines)
-- `handlers/text_handler.py` — text_handler, handle_new_message, photo, voice (~400 lines)
-- `handlers/callback_handler.py` — callback routing (all CB_* prefixes) (~300 lines)
-- `handlers/session_lifecycle.py` — window creation, topic handlers (~400 lines)
-- `bot.py` — wiring only (~250 lines)
+bot.py (was 1931 lines) split into:
+- `handlers/command_handlers.py` — /start, /history, /screenshot, /esc, /kill (393 lines)
+- `handlers/text_handler.py` — text_handler, handle_new_message, photo, voice (601 lines)
+- `handlers/callback_handler.py` — callback routing (all CB_* prefixes) (647 lines)
+- `handlers/session_lifecycle.py` — window creation, topic handlers (237 lines)
+- `bot.py` — wiring only (247 lines)
 
 ### New Modules
 
-**auto_approve.py** (RM-10): Async watcher polling tmux panes for `.claude/` permission prompts. Per-window toggle from Telegram.
+**auto_approve.py** (RM-10): Async watcher polling tmux panes for `.claude/` permission prompts. Per-window toggle. 127 lines.
 
-**ws_protocol.py** (RM-11): 14 client→server + 13 server→client dataclasses for WebSocket protocol.
+**ws_protocol.py** (RM-11): 14 client→server + 14 server→client dataclasses for WebSocket protocol. 301 lines.
 
-**terminal_stream.py** (RM-11): Diff-based terminal capture at 200ms intervals, per-window subscriptions.
+**terminal_stream.py** (RM-11): Diff-based terminal capture at 200ms intervals, per-window subscriptions. 95 lines.
 
-**ws_bridge.py** (RM-11): WebSocket server — HMAC auth, sessions, history, messages, keys, files, voice, terminal streaming. Runs as parallel asyncio task.
+**ws_bridge.py** (RM-11): WebSocket server — HMAC auth, sessions, history, messages, keys, files, voice, terminal streaming. 814 lines.

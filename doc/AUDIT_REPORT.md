@@ -73,13 +73,11 @@ Inner `pass` заменён на `logger.warning` — теперь видно к
 ### M-1: ~~`.env.example` не содержит 9 из 14 переменных~~ ✅ ИСПРАВЛЕНО (Ревизия 1/3)
 `.env.example` обновлён — все 13 реальных переменных добавлены. Примечание: `CCBOT_SENDER_INTERVAL` НЕ существует в коде — была ошибка аудита.
 
-### M-2: `telegram-bot-features.md:124` — ссылка на `/list` (не существует)
-Также утверждает "10 commands registered" — фактически 13.
+### M-2: ~~`telegram-bot-features.md:124` — ссылка на `/list` (не существует)~~ ⚠️ ОТЛОЖЕНО
+Внешний документ, не часть кодовой базы. Ссылка на `/list` и "10 commands" — неточность исходного описания. Не влияет на работу бота.
 
-### M-3: ~~`FULL_DOCUMENTATION.md` — неточности~~ ✅ ИСПРАВЛЕНО (Ревизия 1/3)
-- `/kill` помечен как ⚠️ ФАНТОМ
-- `model_command()` удалён
-- bot.py: "~1930 строк"
+### M-3: ~~`FULL_DOCUMENTATION.md` — неточности~~ ✅ ИСПРАВЛЕНО (RM-14)
+Полная перезапись: bot.py обновлён как wiring-only (~247 строк), добавлены все 8 новых модулей (command_handlers, text_handler, callback_handler, session_lifecycle, auto_approve, ws_bridge, ws_protocol, terminal_stream), обновлены фичи 41-45, добавлены 5 новых env vars.
 
 ### M-4: ~~`monitor_state.py:74` — ненужный lazy import~~ ✅ ИСПРАВЛЕНО (RM-12)
 Перенесён `from .utils import atomic_write_json` на уровень модуля.
@@ -90,10 +88,11 @@ Inner `pass` заменён на `logger.warning` — теперь видно к
 ### M-6: ~~`scan_projects` — lossy path reconstruction~~ ✅ ИСПРАВЛЕНО (RM-12)
 Добавлена проверка `Path(candidate).exists()` перед использованием. Документировано как lossy fallback.
 
-### M-7: `scripts/restart.sh` — Linux-only
-Использует `pstree -a` и `grep -P` — не работает на macOS. Hardcoded `TMUX_SESSION="ccbot"`.
+### M-7: ~~`scripts/restart.sh` — Linux-only~~ ⚠️ ОТЛОЖЕНО
+Утилитарный скрипт для dev-окружения. Использует `pstree -a` и `grep -P` — не работает на macOS. Не влияет на production работу бота. Фикс по необходимости.
 
-### M-8: CI не измеряет coverage — N/A (нет CI pipeline)
+### M-8: ~~CI не измеряет coverage~~ ⚠️ НЕ АКТУАЛЬНО
+CI pipeline (`check.yml`) настроен с lint, format, typecheck. Coverage — nice-to-have, не блокирует.
 
 ### M-9: ~~`_IMAGES_DIR.mkdir()` на уровне модуля~~ ✅ ИСПРАВЛЕНО (RM-12)
 Обёрнут в try/except OSError в text_handler.py.
@@ -108,16 +107,17 @@ Inner `pass` заменён на `logger.warning` — теперь видно к
 
 ## LOW — Стиль
 
-### L-1: f-strings vs `%s` в logging — inconsistent
-Одни файлы используют `f"..."`, другие `%s` для logging. `%s` предпочтительнее (deferred evaluation).
+### L-1: ~~f-strings vs `%s` в logging — inconsistent~~ ✅ ИСПРАВЛЕНО (RM-13)
+Стандартизировано на lazy `%s` formatting в logging calls.
 
-### L-2: `"noop"` hardcoded string (bot.py:1563)
-Единственная callback data без `CB_*` константы.
+### L-2: ~~`"noop"` hardcoded string~~ ✅ ИСПРАВЛЕНО (RM-13)
+Перенесён в `callback_data.py` как `CB_NOOP`. Используется в callback_handler.py.
 
-### L-3: `hook.py` — double import внутри функции (lines 231, 264)
-Две отдельные `from .utils import ...` вместо одной.
+### L-3: ~~`hook.py` — double import внутри функции~~ ✅ ИСПРАВЛЕНО (RM-13)
+Объединены в один import.
 
-### L-4: `directory_browser.py:22-24` — лишняя пустая строка между imports
+### L-4: ~~`directory_browser.py:22-24` — лишняя пустая строка~~ ✅ ИСПРАВЛЕНО (RM-13)
+Удалена.
 
 ---
 
@@ -132,7 +132,15 @@ config.py
 ├── transcribe.py
 ├── session.py ──→ tmux_manager, transcript_parser, utils
 ├── session_monitor.py ──→ config, monitor_state, tmux_manager, transcript_parser, utils
-└── bot.py ──→ ALL modules + ALL handlers
+├── auto_approve.py ──→ tmux_manager
+├── terminal_stream.py ──→ tmux_manager
+├── ws_protocol.py (leaf — zero internal deps)
+├── ws_bridge.py ──→ config, session, session_monitor, tmux_manager, ws_protocol, terminal_stream
+└── bot.py (wiring) ──→ ALL handler modules + session_monitor + auto_approve + ws_bridge
+    ├── handlers/command_handlers.py ──→ config, session, tmux_manager, screenshot, terminal_parser, message_sender, callback_data, interactive_ui, history, auto_approve
+    ├── handlers/text_handler.py ──→ config, session, tmux_manager, transcribe, terminal_parser, message_queue, message_sender, directory_browser, interactive_ui, cleanup, callback_data, auto_approve
+    ├── handlers/callback_handler.py ──→ config, session, tmux_manager, screenshot, terminal_parser, message_sender, directory_browser, interactive_ui, history, cleanup, callback_data, session_lifecycle
+    ├── handlers/session_lifecycle.py ──→ config, session, tmux_manager, auto_approve, cleanup, command_handlers
     ├── handlers/message_queue.py ──→ markdown_v2, session, terminal_parser, tmux_manager, message_sender
     ├── handlers/message_sender.py ──→ markdown_v2, transcript_parser
     ├── handlers/status_polling.py ──→ session, terminal_parser, tmux_manager, interactive_ui, cleanup, message_queue
@@ -146,7 +154,7 @@ terminal_parser.py (leaf — zero internal deps)
 transcript_parser.py (leaf — zero internal deps)
 telegram_sender.py (leaf — zero internal deps)
 screenshot.py (leaf — zero internal deps)
-monitor_state.py (near-leaf — lazy import utils)
+monitor_state.py (near-leaf — utils)
 markdown_v2.py ──→ transcript_parser
 ```
 
@@ -158,17 +166,20 @@ markdown_v2.py ──→ transcript_parser
 
 | Путь | Модуль | Риск |
 |------|--------|------|
-| `text_handler` — основной routing сообщений | bot.py | Критический — core feature |
-| `photo_handler` — загрузка и пересылка фото | bot.py | Высокий |
-| `voice_handler` — полный e2e flow | bot.py | Высокий |
-| `topic_closed_handler` — close → kill → cleanup | bot.py | Высокий |
-| `topic_edited_handler` — rename sync | bot.py | Средний |
-| `_create_and_bind_window` — создание окна | bot.py | Критический |
-| `_capture_bash_output` — `!` command | bot.py | Средний |
+| `text_handler` — основной routing сообщений | handlers/text_handler.py | Критический — core feature |
+| `photo_handler` — загрузка и пересылка фото | handlers/text_handler.py | Высокий |
+| `voice_handler` — полный e2e flow | handlers/text_handler.py | Высокий |
+| `topic_closed_handler` — close → kill → cleanup | handlers/session_lifecycle.py | Высокий |
+| `topic_edited_handler` — rename sync | handlers/session_lifecycle.py | Средний |
+| `_create_and_bind_window` — создание окна | handlers/session_lifecycle.py | Критический |
+| `_capture_bash_output` — `!` command | handlers/text_handler.py | Средний |
+| `callback_handler` — all CB_* routing | handlers/callback_handler.py | Высокий |
 | `TmuxManager` — все tmux операции | tmux_manager.py | Критический (но требует tmux) |
 | `resolve_stale_ids()` — startup migration | session.py | Высокий |
-| `directory_browser.py` — все UI builders | handlers/ | Средний |
+| `directory_browser.py` — все UI builders | handlers/directory_browser.py | Средний |
 | `screenshot.py` — `text_to_image` | screenshot.py | Средний |
+| `AutoApproveWatcher._watch_loop` — polling | auto_approve.py | Средний |
+| `WsBridge._handle_connection` — WS auth+dispatch | ws_bridge.py | Высокий |
 
 ---
 
@@ -187,12 +198,12 @@ markdown_v2.py ──→ transcript_parser
 
 ## Рекомендации (приоритизированные)
 
-1. **Реализовать `/kill` command** или удалить из меню
-2. **Обернуть `_IMAGES_DIR.mkdir()` в try/except** (bot.py:559-560)
-3. **Заменить `asyncio.get_event_loop()` на `get_running_loop()`** (session.py:476)
-4. **Добавить `errors="replace"` к aiofiles.open** (session_monitor.py)
-5. **Добавить timeout к `queue.join()`** (bot.py:1744)
-6. ~~**Обновить `.env.example`**~~ ✅ СДЕЛАНО — все 13 переменных
-7. ~~**Исправить неточности в FULL_DOCUMENTATION.md**~~ ✅ СДЕЛАНО — 3 ревизии
-8. **Добавить `--cov` в CI pipeline**
-9. **Заменить `_update_block` на стабильный API** или закрепить версию `telegramify-markdown`
+1. ~~**Реализовать `/kill` command**~~ ✅ СДЕЛАНО (RM-01) — kill_command() в command_handlers.py
+2. ~~**Обернуть `_IMAGES_DIR.mkdir()` в try/except**~~ ✅ СДЕЛАНО (RM-12) — в text_handler.py
+3. ~~**Заменить `asyncio.get_event_loop()` на `get_running_loop()`**~~ ✅ СДЕЛАНО (RM-06) — в session.py
+4. ~~**Добавить `errors="replace"` к aiofiles.open**~~ ✅ СДЕЛАНО (RM-07) — в session_monitor.py
+5. ~~**Добавить timeout к `queue.join()`**~~ ✅ СДЕЛАНО (RM-06) — asyncio.wait_for(timeout=30.0) в text_handler.py
+6. ~~**Обновить `.env.example`**~~ ✅ СДЕЛАНО — все переменные включая WS и auto-approve
+7. ~~**Исправить неточности в FULL_DOCUMENTATION.md**~~ ✅ СДЕЛАНО (RM-14) — полная перезапись
+8. **Добавить `--cov` в CI pipeline** — nice-to-have
+9. ~~**Закрепить версию `telegramify-markdown`**~~ ✅ СДЕЛАНО (RM-12) — `~=0.5.4` в pyproject.toml

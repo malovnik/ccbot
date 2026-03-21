@@ -127,6 +127,11 @@ Handlers (handlers/):
 | `CCBOT_DIR` | Нет | `~/.ccbot` | Директория конфигурации |
 | `CCBOT_CLAUDE_PROJECTS_PATH` | Нет | — | Кастомный путь к проектам Claude |
 | `CLAUDE_CONFIG_DIR` | Нет | — | Кастомный config dir Claude |
+| `CCBOT_DANGEROUS_MODE` | Нет | `true` | Запускать Claude Code с `--dangerously-skip-permissions` |
+| `CCBOT_AUTO_APPROVE` | Нет | `true` | Включить auto-approve watcher для `.claude/` prompts |
+| `CCBOT_WS_HOST` | Нет | `127.0.0.1` | Хост WebSocket сервера |
+| `CCBOT_WS_PORT` | Нет | `8765` | Порт WebSocket сервера |
+| `CCBOT_WS_TOKEN` | Нет | — | HMAC токен для WS авторизации (пустой = WS выключен) |
 
 ### Приоритет .env файлов
 1. Локальный `.env` (текущая директория)
@@ -211,36 +216,21 @@ Handlers (handlers/):
 
 ---
 
-### `src/ccbot/bot.py` — Основной бот (~1930 строк)
+### `src/ccbot/bot.py` — Wiring-only (~247 строк)
 
-**Что делает:** Регистрирует все хэндлеры, управляет жизненным циклом бота, содержит все command handlers и message routing.
+**Что делает:** Точка сборки приложения. Регистрирует все хэндлеры из `handlers/`, настраивает rate limiter, управляет жизненным циклом. Вся бизнес-логика вынесена в handler-модули (RM-02..05).
 
-**Ключевые функции:**
-- `create_bot()` — создаёт Application с AIORateLimiter, регистрирует handlers
-- `post_init()` — вызывается после инициализации бота: resolve_stale_ids, start monitor, start status polling
-- `post_shutdown()` — остановка monitor, workers, httpx clients
-- `handle_new_message()` — основной handler: routing по topic, directory browser, send_to_window
-- `text_handler()` — основной routing текстовых сообщений
-- `callback_handler()` — обработка inline keyboard callback'ов
-- `start_command()` — /start
-- `history_command()` — /history
-- `screenshot_command()` — /screenshot (capture pane → PNG)
-- `esc_command()` — /esc (отправить Escape в tmux)
-- `unbind_command()` — /unbind (отвязать topic)
-- `usage_command()` — /usage (capture pane, parse usage modal)
-- `forward_command_handler()` — forward неизвестных /commands в Claude Code (включая CC_COMMANDS: clear, compact и др.)
-- `photo_handler()` — скачать фото, отправить путь как base64 image
-- `voice_handler()` — транскрипция через OpenAI API
-- `topic_closed_handler()` — cleanup при закрытии/удалении topic
-- `topic_edited_handler()` — синхронизация имени tmux window при переименовании topic
-- `unsupported_content_handler()` — предупреждение для стикеров и т.д.
-- `_on_new_message()` — callback из SessionMonitor, routing к нужному topic
-- `_capture_bash_output()` — polling вывода `!` shell-команд (30s timeout, 1s poll interval)
-- `_create_and_bind_window()` — создание tmux окна и привязка к topic
+**Константы:**
+- `CC_COMMANDS` — набор Claude Code команд (clear, compact, etc.), автоматически добавляемых в меню Telegram
+
+**Функции:**
+- `create_bot()` — создаёт Application с AIORateLimiter(max_retries=5, max_rate=30), регистрирует handlers из command_handlers, text_handler, callback_handler, session_lifecycle
+- `post_init(app)` — вызывается после инициализации: resolve_stale_ids, load_session_map, start monitor + status polling + WsBridge (если настроен)
+- `post_shutdown(app)` — остановка monitor, message queue workers, auto-approve watcher, WsBridge, httpx clients
 
 **Rate limiting:**
 - `AIORateLimiter(max_retries=5)` на Application (30 req/s global)
-- Pre-fill bucket при старте для избежания burst
+- Pre-fill bucket при старте для избежания burst против серверного счётчика Telegram
 
 ---
 
@@ -473,6 +463,93 @@ Read, Write, Edit, Bash, Grep, Glob, Task, WebFetch, WebSearch, TodoWrite, TodoR
 - `atomic_write_json(path, data)` — crash-safe запись JSON (temp → rename)
 - `read_cwd_from_jsonl(file_path)` — извлечь cwd из первой JSONL записи
 
+### `src/ccbot/auto_approve.py` — Auto-approve watcher (127 строк)
+
+**Что делает:** Polling tmux panes на наличие permission prompts от Claude Code (`.claude/` self-edit) и автоматическое подтверждение. Флаг `--dangerously-skip-permissions` покрывает обычные промпты, но НЕ покрывает `.claude/` self-edit — этот watcher закрывает этот пробел.
+
+**Класс `AutoApproveWatcher`:**
+- `start(window_id)` — запустить watcher для конкретного tmux окна
+- `stop(window_id)` — остановить watcher для окна
+- `stop_all()` — остановить все watchers
+- `is_active(window_id)` → bool — проверка активности
+- `active_windows()` → set[str] — список активных окон
+- `_watch_loop(window_id)` — polling loop: capture pane → match patterns → send keys
+
+**Константа `_DEFAULT_PATTERNS`:**
+- Pattern 1: "allow Claude to edit its own settings" → Down + Enter
+- Pattern 2: "authorize Claude to modify its config files" → y + Enter
+- Pattern 3: "allow all edits during this session" → Down + Enter
+
+**Глобальный экземпляр:** `auto_approve_watcher = AutoApproveWatcher()`
+
+---
+
+### `src/ccbot/ws_bridge.py` — WebSocket bridge (814 строк)
+
+**Что делает:** WebSocket сервер для подключения веб-фронтенда к CCBot. Работает в том же asyncio event loop, что и Telegram бот. HMAC-аутентификация, rate limiting, управление сессиями.
+
+**Класс `_ClientState`:**
+- `check_rate_limit()` — rate limiting per client (10 msg/s window)
+
+**Класс `WsBridge`:**
+- `start()` / `stop()` — управление WebSocket сервером
+- `broadcast(msg)` — broadcast всем аутентифицированным клиентам
+- `on_new_message(session_id, messages)` — callback из SessionMonitor для WS клиентов
+- `_handle_connection(ws)` — обработка нового подключения (auth → dispatch loop)
+- `_dispatch(msg, ws, state)` — маршрутизация входящих сообщений по типу
+- `_handle_auth(msg, ws, state)` — HMAC token verification
+- `_handle_list_sessions()` — список активных сессий
+- `_handle_create_session(msg)` — создание нового tmux окна + Claude Code
+- `_handle_resume_session(msg)` — resume существующей сессии
+- `_handle_kill_session(msg)` — kill tmux окна
+- `_handle_send_message(msg)` — отправка текста в tmux
+- `_handle_send_key(msg)` — отправка клавиши в tmux
+- `_handle_get_history(msg)` — получение истории сообщений
+- `_handle_browse_directory(msg)` — навигация по файловой системе
+- `_handle_binary(data, state)` — обработка бинарных данных (file upload)
+- `_save_uploaded_file(data)` → str — сохранение загруженного файла
+- `_on_terminal_data(window_id, data)` — callback из TerminalStreamer
+
+**Константы:**
+- `_RATE_LIMIT = 10` — макс сообщений в окне
+- `_RATE_WINDOW = 1.0` — размер окна (секунды)
+- `_MAX_CONNECTIONS = 5` — макс одновременных подключений
+
+**Глобальный экземпляр:** `ws_bridge = WsBridge()`
+
+---
+
+### `src/ccbot/ws_protocol.py` — WebSocket протокол (301 строка)
+
+**Что делает:** Типизированные dataclass-определения всех сообщений WebSocket протокола между сервером и клиентом. JSON сериализация/десериализация.
+
+**Client → Server (14 типов):**
+`WsAuth`, `WsListSessions`, `WsCreateSession`, `WsResumeSession`, `WsKillSession`, `WsSendMessage`, `WsSendKey`, `WsGetHistory`, `WsBrowseDirectory`, `WsSubscribeTerminal`, `WsUnsubscribeTerminal`, `WsCaptureTerminal`, `WsUploadFile`, `WsPing`
+
+**Server → Client (14 типов):**
+`WsAuthResult`, `WsSessionInfo`, `WsSessionList`, `WsSessionCreated`, `WsSessionEnded`, `WsMessage`, `WsFileMessage`, `WsStatus`, `WsStatusClear`, `WsInteractiveUi`, `WsTerminalData`, `WsDirectoryListing`, `WsHistory`, `WsError`, `WsPong`
+
+**Функции:**
+- `serialize(msg)` → str — dataclass → JSON string
+- `parse_client_message(raw)` → WsClientMsg — JSON → typed dataclass
+
+---
+
+### `src/ccbot/terminal_stream.py` — Terminal streaming (95 строк)
+
+**Что делает:** Периодический захват tmux pane с diff-based доставкой. Каждое окно получает свой capture task, запускаемый при первой подписке и останавливаемый при отсутствии подписчиков.
+
+**Класс `TerminalStreamer`:**
+- `subscribe(window_id, client_id)` — подписаться на обновления окна (запускает capture loop)
+- `unsubscribe(window_id, client_id)` — отписаться
+- `unsubscribe_all(client_id)` — отписаться от всех окон (при disconnect)
+- `stop()` — остановить все capture loops
+- `_capture_loop(window_id)` — polling loop: capture pane каждые 200ms, отправлять только изменения
+
+**Константы:**
+- `CAPTURE_INTERVAL = 0.2` — 200ms между captures
+- `MAX_SUBSCRIBERS_PER_WINDOW = 10`
+
 ---
 
 ## 7. Handlers {#handlers}
@@ -625,6 +702,73 @@ Read, Write, Edit, Bash, Grep, Glob, Task, WebFetch, WebSearch, TodoWrite, TodoR
   - interactive_msgs + interactive_mode
   - pending thread state
 
+### `handlers/command_handlers.py` — Команды бота (393 строки)
+
+**Что делает:** Все /command handlers, вынесенные из bot.py (RM-02). Также содержит общие утилиты `is_user_allowed()` и `_get_thread_id()`.
+
+**Функции:**
+- `is_user_allowed(update)` — проверка авторизации + автосохранение group_chat_id
+- `_get_thread_id(update)` — извлечь thread_id из update (для forum topics)
+- `start_command()` — /start
+- `history_command()` — /history (делегирует в handlers/history.py)
+- `screenshot_command()` — /screenshot (capture pane → PNG через screenshot.py) + inline keyboard с клавишами
+- `kill_command()` — /kill (kill tmux window + unbind + cleanup + stop auto-approve)
+- `unbind_command()` — /unbind (unbind без kill)
+- `esc_command()` — /esc (Escape в tmux для прерывания Claude)
+- `usage_command()` — /usage (capture pane → parse usage modal)
+- `forward_command_handler()` — forward неизвестных /commands в Claude Code (включая CC_COMMANDS)
+- `unsupported_content_handler()` — предупреждение для стикеров/анимаций
+- `_build_screenshot_keyboard()` — inline keyboard для навигации скриншота (arrows, Enter, Esc, Tab, etc.)
+
+**Константы:**
+- `_KEYS_SEND_MAP` — маппинг callback_data → tmux key
+- `_KEY_LABELS` — подписи кнопок
+
+---
+
+### `handlers/text_handler.py` — Обработка сообщений (601 строка)
+
+**Что делает:** Core message routing, вынесен из bot.py (RM-03). Обрабатывает текст, фото, голос и ответы от Claude.
+
+**Функции:**
+- `text_handler(update, context)` — основной routing текстовых сообщений: проверка авторизации, определение привязки topic → window, отправка в tmux
+- `handle_new_message(session_id, messages, bot)` — callback из SessionMonitor: маршрутизация ответов Claude к правильным topic'ам, enqueue в message queue
+- `photo_handler(update, context)` — скачивание фото → сохранение в temp dir → отправка пути в Claude Code
+- `voice_handler(update, context)` — транскрипция OGG через OpenAI API → отправка текста в Claude Code
+- `_capture_bash_output(window_id, topic_key, bot, user_data)` — background polling вывода `!` shell-команд (30s timeout, 1s interval)
+- `_cancel_bash_capture(topic_key)` — отмена активного bash capture
+
+**Константы:**
+- `_IMAGES_DIR` — путь для временных фото (`/tmp/ccbot_images/`)
+
+---
+
+### `handlers/callback_handler.py` — Callback routing (647 строк)
+
+**Что делает:** Единый роутер всех inline keyboard callback'ов, вынесен из bot.py (RM-04). Маршрутизирует по CB_* prefix'ам.
+
+**Функция:**
+- `callback_handler(update, context)` — маршрутизация по prefix'у callback_data:
+  - `CB_DIR_*` → directory browser навигация (select, up, confirm, cancel, page)
+  - `CB_WIN_*` → window picker (bind, new, cancel)
+  - `CB_SESSION_*` → session picker (select, new, cancel)
+  - `CB_HISTORY_*` → пагинация истории (prev, next)
+  - `CB_SCREENSHOT_REFRESH` → обновление скриншота
+  - `CB_KEYS_PREFIX` → отправка клавиш через скриншот UI
+  - `CB_ASK_*` → interactive UI навигация (↑↓←→ Enter Esc Space Tab Refresh)
+  - `"noop"` → answer_callback_query (заглушка)
+
+---
+
+### `handlers/session_lifecycle.py` — Жизненный цикл сессий (237 строк)
+
+**Что делает:** Создание/удаление tmux окон и привязка к topic'ам, вынесен из bot.py (RM-05).
+
+**Функции:**
+- `topic_closed_handler(update, context)` — обработка закрытия/удаления topic: kill tmux window, unbind, stop auto-approve, cleanup state
+- `topic_edited_handler(update, context)` — при переименовании topic → синхронизировать имя tmux window
+- `_create_and_bind_window(update, context, cwd, session_id)` — создание нового tmux окна (или --resume), bind к topic, wait for SessionStart hook, forward pending message, запуск auto-approve если включен
+
 ---
 
 ## 8. State-файлы {#state-файлы}
@@ -769,3 +913,8 @@ Read, Write, Edit, Bash, Grep, Glob, Task, WebFetch, WebSearch, TodoWrite, TodoR
 38. **Topic Existence Probing** — каждые 60s проверка что topic'ы ещё живы
 39. **Multi-user Support** — concurrent users без интерференции
 40. **`!` Command Bash Output Capture** — при отправке `!` shell-команд: 30s polling с 1s интервалом, вывод отправляется в Telegram
+41. **Dangerous Mode** — `--dangerously-skip-permissions` флаг для Claude Code (CCBOT_DANGEROUS_MODE env var), пропускает стандартные permission prompts
+42. **Auto-Approve Watcher** — polling tmux panes для `.claude/` self-edit permission prompts и автоматическое подтверждение (per-window, CCBOT_AUTO_APPROVE env var)
+43. **WebSocket Bridge** — WS сервер для подключения веб-фронтенда: HMAC auth, session CRUD, messaging, file upload, terminal streaming (CCBOT_WS_HOST/PORT/TOKEN)
+44. **Terminal Streaming** — diff-based capture tmux panes каждые 200ms для WS клиентов с subscriber management
+45. **Modular Handler Architecture** — bot.py вынесен в 4 handler-модуля (command_handlers, text_handler, callback_handler, session_lifecycle) для maintainability
