@@ -66,7 +66,7 @@
 - [x] RM-01 — Critical баги
 - [x] RM-02 — Рефакторинг: command_handlers
 - [x] RM-03 — Рефакторинг: text_handler
-- [ ] RM-04 — Рефакторинг: callback_handler
+- [x] RM-04 — Рефакторинг: callback_handler
 - [ ] RM-05 — Рефакторинг: session_lifecycle + финал
 - [ ] RM-06 — High: async/concurrency
 - [ ] RM-07 — High: data integrity
