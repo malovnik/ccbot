@@ -12,6 +12,7 @@ dependencies = [
     "Pillow>=10.0.0",
     "aiofiles>=24.0.0",
     "telegramify-markdown~=0.5.4",  # pinned: uses private _update_block API
+    "websockets>=16.0",
 ]
 
 [project.scripts]

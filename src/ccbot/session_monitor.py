@@ -49,6 +49,7 @@ class NewMessage:
     role: str = "assistant"  # "user" or "assistant"
     tool_name: str | None = None  # For tool_use messages, the tool name
     image_data: list[tuple[str, bytes]] | None = None  # From tool_result images
+    file_path: str | None = None  # For file content type (WS bridge)
 
 
 class SessionMonitor:

@@ -148,6 +148,17 @@ async def post_init(application: Application) -> None:
     _status_poll_task = asyncio.create_task(status_poll_loop(application.bot))
     logger.info("Status polling task started")
 
+    # Start WebSocket server if token is configured
+    if config.ws_token:
+        from .ws_bridge import WsBridge
+
+        ws_bridge = WsBridge()
+        await ws_bridge.start()
+        application.bot_data["ws_bridge"] = ws_bridge
+        logger.info("WebSocket server started on port %d", config.ws_port)
+    else:
+        logger.info("WebSocket server disabled (CCBOT_WS_TOKEN not set)")
+
 
 async def post_shutdown(application: Application) -> None:
     global _status_poll_task
@@ -161,6 +172,12 @@ async def post_shutdown(application: Application) -> None:
             pass
         _status_poll_task = None
         logger.info("Status polling stopped")
+
+    # Stop WebSocket server
+    ws_bridge = application.bot_data.get("ws_bridge")
+    if ws_bridge:
+        await ws_bridge.stop()
+        logger.info("WebSocket server stopped")
 
     # Stop all auto-approve watchers
     from .auto_approve import auto_approve_watcher

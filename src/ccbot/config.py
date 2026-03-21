@@ -101,6 +101,18 @@ class Config:
             os.getenv("CCBOT_SHOW_HIDDEN_DIRS", "").lower() == "true"
         )
 
+        # WebSocket server for web frontend
+        self.ws_host: str = os.getenv("CCBOT_WS_HOST", "127.0.0.1")
+        self.ws_port = int(os.getenv("CCBOT_WS_PORT", "8765"))
+        self.ws_token: str = os.getenv("CCBOT_WS_TOKEN", "")
+        # Allowed root directories for WS file operations
+        allowed_str = os.getenv("CCBOT_ALLOWED_ROOTS", "")
+        self.allowed_roots: list[Path] = (
+            [Path(r.strip()).resolve() for r in allowed_str.split(",") if r.strip()]
+            if allowed_str
+            else [Path.home()]
+        )
+
         # Auto-approve .claude/ self-edit permission prompts (watcher)
         self.auto_approve = os.getenv("CCBOT_AUTO_APPROVE", "true").lower() != "false"
 
