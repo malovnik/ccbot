@@ -1,0 +1,42 @@
+#!/bin/bash
+# CCBot launcher — ensures dependencies, starts tmux session, runs bot.
+# Designed for macOS .app bundle — opens Terminal.app with status output.
+
+set -euo pipefail
+
+# Resolve project directory (relative to .app bundle location)
+APP_DIR="$(cd "$(dirname "$0")/../../.." && pwd)"
+PROJECT_DIR="$APP_DIR"
+
+# If launched from /Applications (symlink/copy), find real project
+if [[ ! -f "$PROJECT_DIR/pyproject.toml" ]]; then
+    # Fallback: hardcoded project path
+    PROJECT_DIR="$HOME/Documents/malovnik-obsidian/🤖 ИИ/Софт/ccbot"
+fi
+
+if [[ ! -f "$PROJECT_DIR/pyproject.toml" ]]; then
+    osascript -e "display dialog \"CCBot project not found at:\n$PROJECT_DIR\" with title \"CCBot Error\" buttons {\"OK\"} default button \"OK\" with icon stop"
+    exit 1
+fi
+
+# PATH setup for homebrew + uv
+export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Check prerequisites
+check_cmd() {
+    if ! command -v "$1" &>/dev/null; then
+        osascript -e "display dialog \"$1 not found. Install it first:\n$2\" with title \"CCBot Error\" buttons {\"OK\"} default button \"OK\" with icon stop"
+        exit 1
+    fi
+}
+
+check_cmd uv "curl -LsSf https://astral.sh/uv/install.sh | sh"
+check_cmd tmux "brew install tmux"
+
+# Run in Terminal.app so user can see logs
+osascript <<APPLESCRIPT
+tell application "Terminal"
+    activate
+    do script "cd '$PROJECT_DIR' && echo '=== CCBot Starting ===' && echo '' && echo 'Syncing dependencies...' && uv sync 2>&1 && echo '' && echo 'Starting CCBot...' && echo '(Close this window to stop)' && echo '' && uv run ccbot; echo ''; echo 'CCBot stopped. Press any key to close.'; read -n1"
+end tell
+APPLESCRIPT
