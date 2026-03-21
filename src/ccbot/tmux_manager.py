@@ -428,6 +428,8 @@ class TmuxManager:
                     pane = window.active_pane
                     if pane:
                         cmd = config.claude_command
+                        if config.dangerous_mode:
+                            cmd = f"{cmd} --dangerously-skip-permissions"
                         if resume_session_id:
                             cmd = f"{cmd} --resume {resume_session_id}"
                         pane.send_keys(cmd, enter=True)

@@ -71,7 +71,7 @@
 - [x] RM-06 — High: async/concurrency
 - [x] RM-07 — High: data integrity
 - [x] RM-08 — High: error handling
-- [ ] RM-09 — --dangerously-skip-permissions
+- [x] RM-09 — --dangerously-skip-permissions
 - [ ] RM-10 — Auto-approve watcher
 - [ ] RM-11 — WebSocket merge
 - [ ] RM-12 — Medium баги

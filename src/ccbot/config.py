@@ -101,6 +101,12 @@ class Config:
             os.getenv("CCBOT_SHOW_HIDDEN_DIRS", "").lower() == "true"
         )
 
+        # Skip all permission prompts in Claude Code (--dangerously-skip-permissions)
+        # When True, Claude Code runs fully autonomously without asking for permission.
+        self.dangerous_mode = (
+            os.getenv("CCBOT_DANGEROUS_MODE", "true").lower() != "false"
+        )
+
         # OpenAI API for voice message transcription (optional)
         self.openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
         self.openai_base_url: str = os.getenv(
