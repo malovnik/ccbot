@@ -19,7 +19,12 @@ from .utils import ccbot_dir
 logger = logging.getLogger(__name__)
 
 # Env vars that must not leak to child processes (e.g. Claude Code via tmux)
-SENSITIVE_ENV_VARS = {"TELEGRAM_BOT_TOKEN", "ALLOWED_USERS", "OPENAI_API_KEY"}
+SENSITIVE_ENV_VARS = {
+    "TELEGRAM_BOT_TOKEN",
+    "ALLOWED_USERS",
+    "OPENAI_API_KEY",
+    "DEEPGRAM_API_KEY",
+}
 
 
 class Config:
@@ -122,7 +127,9 @@ class Config:
             os.getenv("CCBOT_DANGEROUS_MODE", "true").lower() != "false"
         )
 
-        # OpenAI API for voice message transcription (optional)
+        # Voice transcription API (optional — uses whichever key is available)
+        # Priority: Deepgram > OpenAI (Deepgram is cheaper and faster)
+        self.deepgram_api_key: str = os.getenv("DEEPGRAM_API_KEY", "")
         self.openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
         self.openai_base_url: str = os.getenv(
             "OPENAI_BASE_URL", "https://api.openai.com/v1"

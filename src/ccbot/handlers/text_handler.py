@@ -158,11 +158,11 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     if not update.message or not update.message.voice:
         return
 
-    if not config.openai_api_key:
+    if not config.deepgram_api_key and not config.openai_api_key:
         await safe_reply(
             update.message,
-            "Voice transcription requires an OpenAI API key.\n"
-            "Set `OPENAI_API_KEY` in your `.env` file and restart the bot.",
+            "Voice transcription requires an API key.\n"
+            "Set `DEEPGRAM_API_KEY` or `OPENAI_API_KEY` in your `.env` file.",
         )
         return
 
