@@ -162,6 +162,12 @@ async def post_shutdown(application: Application) -> None:
         _status_poll_task = None
         logger.info("Status polling stopped")
 
+    # Stop all auto-approve watchers
+    from .auto_approve import auto_approve_watcher
+
+    auto_approve_watcher.stop_all()
+    logger.info("Auto-approve watchers stopped")
+
     # Stop all queue workers
     await shutdown_workers()
 

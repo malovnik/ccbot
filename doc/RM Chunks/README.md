@@ -72,7 +72,7 @@
 - [x] RM-07 — High: data integrity
 - [x] RM-08 — High: error handling
 - [x] RM-09 — --dangerously-skip-permissions
-- [ ] RM-10 — Auto-approve watcher
+- [x] RM-10 — Auto-approve watcher
 - [ ] RM-11 — WebSocket merge
 - [ ] RM-12 — Medium баги
 - [ ] RM-13 — Low баги + style

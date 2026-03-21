@@ -101,6 +101,9 @@ class Config:
             os.getenv("CCBOT_SHOW_HIDDEN_DIRS", "").lower() == "true"
         )
 
+        # Auto-approve .claude/ self-edit permission prompts (watcher)
+        self.auto_approve = os.getenv("CCBOT_AUTO_APPROVE", "true").lower() != "false"
+
         # Skip all permission prompts in Claude Code (--dangerously-skip-permissions)
         # When True, Claude Code runs fully autonomously without asking for permission.
         self.dangerous_mode = (

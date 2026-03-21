@@ -12,6 +12,8 @@ import logging
 from telegram import CallbackQuery, Update, User
 from telegram.ext import ContextTypes
 
+from ..auto_approve import auto_approve_watcher
+from ..config import config
 from ..session import session_manager
 from ..tmux_manager import tmux_manager
 from .cleanup import clear_topic_state
@@ -53,6 +55,7 @@ async def topic_closed_handler(
                 thread_id,
             )
         session_manager.unbind_thread(user.id, thread_id)
+        auto_approve_watcher.stop(wid)
         # Clean up all memory state for this topic
         await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
     else:
@@ -137,6 +140,10 @@ async def _create_and_bind_window(
         hook_ok = await session_manager.wait_for_session_map_entry(
             created_wid, timeout=hook_timeout
         )
+
+        # Auto-start watcher for .claude/ permission prompts
+        if config.auto_approve:
+            auto_approve_watcher.start(created_wid)
 
         # --resume creates a new session_id in the hook, but messages continue
         # writing to the resumed session's JSONL file. Override window_state to
