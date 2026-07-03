@@ -397,6 +397,22 @@ class SessionManager:
             len(stale_keys),
         )
 
+    def remove_session_map_entry(self, window_id: str) -> None:
+        """Remove a specific window's entry from session_map.json."""
+        if not config.session_map_file.exists():
+            return
+        try:
+            content = config.session_map_file.read_text(encoding="utf-8")
+            session_map = json.loads(content)
+        except (json.JSONDecodeError, OSError):
+            return
+
+        key = f"{config.tmux_session_name}:{window_id}"
+        if key in session_map:
+            del session_map[key]
+            atomic_write_json(config.session_map_file, session_map)
+            logger.info("Removed session_map entry: %s", key)
+
     # --- Display name management ---
 
     def get_display_name(self, window_id: str) -> str:
@@ -569,6 +585,14 @@ class SessionManager:
         state.session_id = ""
         self._save_state()
         logger.info("Cleared session for window_id %s", window_id)
+
+    def remove_window_state(self, window_id: str) -> None:
+        """Fully remove window state and display name (e.g., when window is killed)."""
+        removed = self.window_states.pop(window_id, None)
+        self.window_display_names.pop(window_id, None)
+        if removed:
+            self._save_state()
+            logger.info("Removed window state for %s", window_id)
 
     @staticmethod
     def _encode_cwd(cwd: str) -> str:

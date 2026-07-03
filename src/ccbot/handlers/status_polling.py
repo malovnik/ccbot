@@ -189,6 +189,8 @@ async def status_poll_loop(bot: Bot) -> None:
                             if w:
                                 await tmux_manager.kill_window(w.window_id)
                             session_manager.unbind_thread(user_id, thread_id)
+                            session_manager.remove_window_state(wid)
+                            session_manager.remove_session_map_entry(wid)
                             await clear_topic_state(user_id, thread_id, bot)
                             logger.info(
                                 "Topic deleted: killed window_id '%s' and "

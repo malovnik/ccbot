@@ -43,6 +43,9 @@ from pathlib import Path
 from telegram import (
     Bot,
     BotCommand,
+    BotCommandScopeAllChatAdministrators,
+    BotCommandScopeAllGroupChats,
+    BotCommandScopeAllPrivateChats,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InputMediaDocument,
@@ -1012,6 +1015,8 @@ async def topic_closed_handler(
                 thread_id,
             )
         session_manager.unbind_thread(user.id, thread_id)
+        session_manager.remove_window_state(wid)
+        session_manager.remove_session_map_entry(wid)
         # Clean up all memory state for this topic
         await clear_topic_state(user.id, thread_id, context.bot, context.user_data)
         _auto_named_topics.discard((user.id, thread_id))
@@ -2940,7 +2945,13 @@ async def post_init(application: Application) -> None:
 
     _bot_start_time = time.monotonic()
 
-    await application.bot.delete_my_commands()
+    for scope in [
+        None,
+        BotCommandScopeAllPrivateChats(),
+        BotCommandScopeAllGroupChats(),
+        BotCommandScopeAllChatAdministrators(),
+    ]:
+        await application.bot.delete_my_commands(scope=scope)
 
     bot_commands = [
         BotCommand("start", "Приветствие и справка"),
