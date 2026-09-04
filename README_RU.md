@@ -1,6 +1,6 @@
 # CCBot
 
-[English README](README.md)
+[English README](🤖%20ИИ/Софт/ccbot/README.md)
 [中文文档](README_CN.md)
 
 Удалённое управление сессиями Claude Code через Telegram — мониторинг, интерактивное управление и работа с AI-сессиями в tmux.
